@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package gophserver;
+
+option go_package = "GophKeeper/proto";
+
+import "google/protobuf/empty.proto";

@@ -112,7 +112,7 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 //
 // Handler GET /api/v1/admin/users/me
 //
-// Authorization: "Bearer e2b45d6768b6485f8d6a13d2228ff53df8a06df8de1b305e293b674aea6efeaa26eaa314caacd93eb6778e96732498f7"
+// Authorization: "Bearer T"
 //
 // Possible response codes:
 // 200 - load user information;

@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
-
-	"github.com/google/uuid"
 )
 
 // ErrNotValidSing - error that occurs when it is impossible to recover UserID
@@ -15,18 +13,18 @@ var ErrNotValidSing = errors.New("sign is not valid")
 
 // Encrypt convert user uuid to hash
 // secret key should be the same for Encrypt and Decrypt
-func Encrypt(uuid uuid.UUID, secret []byte) string {
+func Encrypt(data string, secret []byte) string {
 	h := hmac.New(sha256.New, secret)
-	h.Write(uuid[:])
+	h.Write([]byte(data)[:])
 	dst := h.Sum(nil)
-	var fullCookie []byte
-	fullCookie = append(fullCookie, uuid[:]...)
-	fullCookie = append(fullCookie, dst...)
-	return hex.EncodeToString(fullCookie)
+	var fullData []byte
+	fullData = append(fullData, []byte(data)[:]...)
+	fullData = append(fullData, dst...)
+	return hex.EncodeToString(fullData)
 }
 
 // Decrypt convert user hash to uuid
-func Decrypt(hashString string, secret []byte) (uuid.UUID, error) {
+func Decrypt(hashString string, secret []byte) (string, error) {
 	var (
 		data []byte // декодированное сообщение с подписью
 		err  error
@@ -36,12 +34,10 @@ func Decrypt(hashString string, secret []byte) (uuid.UUID, error) {
 	data, err = hex.DecodeString(hashString)
 	if err != nil {
 		log.Println(err)
-		return uuid.UUID{}, ErrNotValidSing
+		return "", ErrNotValidSing
 	}
-	id, idErr := uuid.FromBytes(data[:16])
-	if idErr != nil {
-		return uuid.UUID{}, idErr
-	}
+	id := string(data[:16])
+	log.Println(id)
 	h := hmac.New(sha256.New, secret)
 	h.Write(data[:16])
 	sign = h.Sum(nil)
@@ -49,6 +45,6 @@ func Decrypt(hashString string, secret []byte) (uuid.UUID, error) {
 	if hmac.Equal(sign, data[16:]) {
 		return id, nil
 	} else {
-		return uuid.UUID{}, ErrNotValidSing
+		return "", ErrNotValidSing
 	}
 }

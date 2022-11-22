@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"AlexSarva/GophKeeper/cryptorizer"
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
@@ -27,12 +28,20 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		note.UserID = userID
+		crypto := cryptorizer.BestCryptorizer(userID.String())
+		note.Encrypt(crypto)
 
 		newNote, newNoteErr := database.Database.NewNote(&note)
 		if newNoteErr != nil {
 			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
+		decrErr := newNote.Decrypt(crypto)
+		if decrErr != nil {
+			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusBadRequest)
+			return
+		}
+
 		resultResponse(w, newNote, "application/json", http.StatusCreated)
 	}
 }
