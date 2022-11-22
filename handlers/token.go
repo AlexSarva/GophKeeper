@@ -28,21 +28,15 @@ func GenerateToken(userID uuid.UUID) (string, time.Time) {
 
 // GetToken cookie selection function from Header
 // returns UserID in uuid format
-func GetToken(r *http.Request) (uuid.UUID, error) {
-	cfg := constant.GlobalContainer.Get("server-config").(models.Config)
-	secret := []byte(cfg.Secret)
+func GetToken(r *http.Request) (string, error) {
 	auth := r.Header.Get("Authorization")
 	if len(auth) == 0 {
-		return uuid.UUID{}, ErrNoAuth
+		return "", ErrNoAuth
 	}
 	tokenValue := strings.Split(auth, "Bearer ")
 	if len(tokenValue) < 2 {
-		return uuid.UUID{}, ErrNoAuth
+		return "uuid.UUID{}", ErrNoAuth
 	}
 	authToken := tokenValue[1]
-	userID, tokenDecryptErr := crypto.Decrypt(authToken, secret)
-	if tokenDecryptErr != nil {
-		return uuid.UUID{}, tokenDecryptErr
-	}
-	return userID, nil
+	return authToken, nil
 }

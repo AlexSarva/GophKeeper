@@ -18,7 +18,7 @@ import (
 type Server struct {
 	httpServer *http.Server
 	cfg        *models.Config
-	db         *app.Database
+	db         *app.Storage
 }
 
 // NewServer Initializing new server instance
@@ -47,7 +47,7 @@ func (a *Server) Run() error {
 	if !a.db.Admin.Ping() {
 		log.Fatalln("admin db didnt lunched")
 	}
-	if !a.db.Repo.Ping() {
+	if !a.db.Database.Ping() {
 		log.Fatalln("work db didnt lunched")
 	}
 

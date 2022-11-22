@@ -2,10 +2,9 @@ package handlers
 
 import (
 	"AlexSarva/GophKeeper/internal/app"
-	"AlexSarva/GophKeeper/storage"
 	"context"
-	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,31 +40,24 @@ func checkContent(next http.Handler) http.Handler {
 }
 
 // userIdentification get user-id and permissions from authorization token
-func userIdentification(database *app.Database) func(next http.Handler) http.Handler {
+func userIdentification(database *app.Storage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			userID, tokenErr := GetToken(r)
-			if tokenErr != nil {
-				errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", tokenErr), "application/json", http.StatusUnauthorized)
+			jwt, jwtErr := GetToken(r)
+			if jwtErr != nil {
+				errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", jwtErr), "application/json", http.StatusUnauthorized)
 				return
 			}
 
-			if !database.Admin.CheckUser(userID) {
-				errorMessageResponse(w, "user doesnt registered. visit: api/v1/register", "application/json", http.StatusUnauthorized)
+			userID, userIDErr := database.Authorizer.ParseToken(jwt)
+			if userIDErr != nil {
+				errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", userIDErr), "application/json", http.StatusUnauthorized)
 				return
 			}
 
-			userRoles, userRolesErr := database.Admin.GetUserRoles(userID)
-			if userRolesErr != nil {
-				if errors.Is(storage.ErrNoValues, userRolesErr) {
-					errorMessageResponse(w, ErrUnauthorized.Error()+": user doesnt have any role", "application/json", http.StatusUnauthorized)
-					return
-				}
-				errorMessageResponse(w, userRolesErr.Error(), "application/json", http.StatusInternalServerError)
-				return
-			}
-			ctx := context.WithValue(r.Context(), "acl.permission", userRoles)
-			ctx = context.WithValue(ctx, "userID", userID)
+			log.Println(userID)
+
+			ctx := context.WithValue(r.Context(), "user.id", userID)
 			r = r.WithContext(ctx)
 			next.ServeHTTP(w, r)
 		}

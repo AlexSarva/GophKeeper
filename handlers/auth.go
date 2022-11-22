@@ -1,15 +1,15 @@
 package handlers
 
 import (
+	"AlexSarva/GophKeeper/authorizer"
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"database/sql"
+	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // UserRegistration - user registration method
@@ -30,7 +30,7 @@ import (
 // 400 - invalid request format;
 // 409 - login is already taken;
 // 500 - an internal server error.
-func UserRegistration(database *app.Database) http.HandlerFunc {
+func UserRegistration(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var user models.User
 		readBodyErr := readBodyInStruct(r, &user)
@@ -43,33 +43,25 @@ func UserRegistration(database *app.Database) http.HandlerFunc {
 			return
 		}
 
-		userID := uuid.New()
-		userToken, userTokenExp := GenerateToken(userID)
-		hashedPassword, bcrypteErr := bcrypt.GenerateFromPassword([]byte(user.Password), 4)
-		if bcrypteErr != nil {
-			errorMessageResponse(w, ErrCryptPassword.Error(), "application/json", http.StatusBadRequest)
-			return
-		}
+		user.ID = uuid.New()
+		newUser, newUserErr := database.Authorizer.SignUp(user)
 
-		user.ID, user.Password, user.Token, user.TokenExp = userID, string(hashedPassword), userToken, userTokenExp
-
-		newUserErr := database.Admin.Register(user)
 		if newUserErr != nil {
-			if newUserErr == storage.ErrDuplicatePK {
+			if errors.As(newUserErr, &storage.ErrDuplicatePK) {
 				errorMessageResponse(w, ErrLoginExist.Error(), "application/json", http.StatusConflict)
 				return
 			}
+
+			if errors.As(newUserErr, &authorizer.ErrHashPassword) || errors.As(newUserErr, &authorizer.ErrGenerateToken) {
+				errorMessageResponse(w, newUserErr.Error(), "application/json", http.StatusBadRequest)
+				return
+			}
+
 			errorMessageResponse(w, newUserErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		userInfo, userInfoErr := database.Admin.GetUserInfo(userID)
-		if userInfoErr != nil {
-			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
-			return
-		}
-
-		resultResponse(w, userInfo, "application/json", http.StatusCreated)
+		resultResponse(w, newUser, "application/json", http.StatusCreated)
 	}
 }
 
@@ -88,7 +80,7 @@ func UserRegistration(database *app.Database) http.HandlerFunc {
 // 400 - invalid request format;
 // 401 - invalid login/password pair;
 // 500 - an internal server error.
-func UserAuthentication(database *app.Database) http.HandlerFunc {
+func UserAuthentication(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var user models.UserLogin
@@ -98,26 +90,47 @@ func UserAuthentication(database *app.Database) http.HandlerFunc {
 			return
 		}
 
-		passwdDB, passwdDBErr := database.Admin.Login(user.Email)
-		if passwdDBErr != nil {
-			if errors.Is(passwdDBErr, sql.ErrNoRows) {
-				errorMessageResponse(w, ErrNoUserExists.Error(), "application/json", http.StatusUnauthorized)
+		userInfo, userInfoErr := database.Authorizer.SignIn(&user)
+		if userInfoErr != nil {
+			if errors.As(userInfoErr, &authorizer.ErrNoUserExists) {
+				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
 				return
 			}
-			errorMessageResponse(w, passwdDBErr.Error(), "application/json", http.StatusInternalServerError)
+			if errors.As(userInfoErr, &authorizer.ErrComparePassword) {
+				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
+				return
+			}
+			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		cryptErr := bcrypt.CompareHashAndPassword([]byte(passwdDB.Password), []byte(user.Password))
-		if cryptErr != nil {
-			errorMessageResponse(w, ErrComparePassword.Error(), "application/json", http.StatusUnauthorized)
+		resultResponse(w, userInfo, "application/json", http.StatusOK)
+	}
+}
+
+// GetUserInfo - user info method
+//
+// Handler GET /api/v1/admin/users/me
+//
+// Authorization: "Bearer e2b45d6768b6485f8d6a13d2228ff53df8a06df8de1b305e293b674aea6efeaa26eaa314caacd93eb6778e96732498f7"
+//
+// Possible response codes:
+// 200 - load user information;
+// 400 - invalid request format;
+// 401 - invalid auth;
+// 500 - an internal server error.
+func GetUserInfo(database *app.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		userID, userIDErr := utils.GetUserID(ctx)
+		if userIDErr != nil {
+			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
-		// TODO Предусмотреть обновление куки
 
-		userInfo, userInfoErr := database.Admin.GetUserInfo(passwdDB.ID)
+		userInfo, userInfoErr := database.Admin.GetUserInfo(userID)
 		if userInfoErr != nil {
-			errorMessageResponse(w, "Internal Server Error "+userInfoErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 

@@ -20,21 +20,10 @@ import (
 )
 
 var (
-	ErrJsonWrite        = errors.New("problem in writing json")
-	ErrCryptPassword    = errors.New("problem is crypt password")
-	ErrComparePassword  = errors.New("password doesnt match")
-	ErrJsonRequest      = errors.New("wrong type provided for fields")
-	ErrLoginExist       = errors.New("login is already busy")
-	ErrNoUserExists     = errors.New("user doesnt exist in database")
-	ErrUnauthorized     = errors.New("user unauthorized")
-	ErrPermissionDenied = errors.New("you dont have permissions to use this method")
-)
-
-var (
-	adminRole      = []string{"admin"}
-	maintainerRole = []string{"admin", "maintainer"}
-	developerRole  = []string{"admin", "maintainer", "developer"}
-	allRoles       = []string{"admin", "maintainer", "developer", "user"}
+	ErrJsonWrite    = errors.New("problem in writing json")
+	ErrJsonRequest  = errors.New("wrong type provided for fields")
+	ErrLoginExist   = errors.New("login is already busy")
+	ErrUnauthorized = errors.New("user unauthorized")
 )
 
 // errorMessageResponse additional respond generator
@@ -142,7 +131,7 @@ func Ping(w http.ResponseWriter, _ *http.Request) {
 
 // CustomHandler - the main_admin_test handler of the server
 // contains middlewares and all routes
-func CustomHandler(database *app.Database) *chi.Mux {
+func CustomHandler(database *app.Storage) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowOriginFunc: CustomAllowOriginFunc,
@@ -168,6 +157,22 @@ func CustomHandler(database *app.Database) *chi.Mux {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", UserRegistration(database))
 		r.Post("/login", UserAuthentication(database))
+
+		r.Route("/users", func(r chi.Router) {
+			r.Use(userIdentification(database))
+			r.Get("/me", GetUserInfo(database))
+		})
+
+		r.Route("/info", func(r chi.Router) {
+			r.Use(userIdentification(database))
+			r.Route("/notes", func(r chi.Router) {
+				r.Get("/", GetNoteList(database))
+				r.Post("/", PostNote(database))
+				r.Get("/{id}", GetNote(database))
+				r.Patch("/{id}", EditNote(database))
+				r.Delete("/{id}", DeleteNote(database))
+			})
+		})
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

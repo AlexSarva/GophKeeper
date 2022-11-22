@@ -19,7 +19,7 @@ type User struct {
 	ID       uuid.UUID `json:"id" db:"id"`
 	Username string    `json:"username" db:"username"`
 	Email    string    `json:"email" db:"email"`
-	Password string    `json:"password" db:"passwd"`
+	Password string    `json:"password,omitempty" db:"passwd"`
 	Token    string    `json:"token" db:"token"`
 	TokenExp time.Time `json:"token_expires" db:"token_expires"`
 }
