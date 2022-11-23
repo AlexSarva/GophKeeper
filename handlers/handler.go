@@ -148,7 +148,7 @@ func CustomHandler(database *app.Storage) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.AllowContentEncoding("gzip"))
-	r.Use(middleware.AllowContentType("application/json", "text/plain", "application/x-gzip"))
+	//r.Use(middleware.AllowContentType("application/json", "text/plain", "application/x-gzip"))
 	r.Use(middleware.Compress(5, gzipContentTypes))
 	r.Use(checkContent)
 	r.Mount("/debug", middleware.Profiler())

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"AlexSarva/GophKeeper/internal/app"
+	"AlexSarva/GophKeeper/utils"
 	"context"
 	"fmt"
 	"log"
@@ -27,7 +28,12 @@ func checkContent(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method == "POST" || r.Method == "PATCH" {
+
+		log.Println(r.Header)
+
+		splittedPath := strings.Split(r.URL.Path, "/")
+		lastElems := splittedPath[len(splittedPath)-2:]
+		if (r.Method == "POST" || r.Method == "PATCH") && !utils.StringInSlice("files", lastElems) {
 			headerContentType := r.Header.Get("Content-Type")
 			if !strings.Contains("application/json, application/x-gzip", headerContentType) {
 				errorMessageResponse(w, "Content Type is not application/json or application/x-gzip", "application/json", http.StatusBadRequest)
@@ -54,8 +60,6 @@ func userIdentification(database *app.Storage) func(next http.Handler) http.Hand
 				errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", userIDErr), "application/json", http.StatusUnauthorized)
 				return
 			}
-
-			log.Println(userID)
 
 			ctx := context.WithValue(r.Context(), "user.id", userID)
 			r = r.WithContext(ctx)

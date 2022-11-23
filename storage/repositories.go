@@ -38,6 +38,6 @@ type Database interface {
 	NewFile(file *models.NewFile) (models.File, error)
 	AllFiles(userID uuid.UUID) ([]models.File, error)
 	GetFile(cardID uuid.UUID, userID uuid.UUID) (models.File, error)
-	EditFile(file models.NewFile) (models.File, error)
+	EditFile(file *models.NewFile) (models.File, error)
 	DeleteFile(fileID uuid.UUID, userID uuid.UUID) error
 }

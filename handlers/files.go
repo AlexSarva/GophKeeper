@@ -6,6 +6,8 @@ import (
 	"AlexSarva/GophKeeper/storage"
 	"AlexSarva/GophKeeper/utils"
 	"errors"
+	"io"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -14,17 +16,34 @@ import (
 
 func PostFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var file models.NewFile
-		readBodyErr := readBodyInStruct(r, &file)
-		if readBodyErr != nil {
-			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
+		filename := r.URL.Query().Get("title")
+		if filename == "" {
+			errorMessageResponse(w, "dont have parameter 'title' in request", "application/json", http.StatusBadRequest)
 			return
+		}
+		notes := r.URL.Query().Get("notes")
+		var file models.NewFile
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				errorMessageResponse(w, err.Error(), "application/json", http.StatusBadRequest)
+				return
+			}
+		}(r.Body)
+		buf, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal("request", err)
 		}
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
+		}
+		file.File = buf
+		file.Title = filename
+		if notes != "" {
+			file.Notes = notes
 		}
 		file.UserID = userID
 
@@ -93,11 +112,28 @@ func GetFile(database *app.Storage) http.HandlerFunc {
 
 func EditFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var editFile models.NewFile
-		readBodyErr := readBodyInStruct(r, &editFile)
-		if readBodyErr != nil {
-			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
+		filename := r.URL.Query().Get("title")
+		if filename == "" {
+			errorMessageResponse(w, "dont have parameter 'title' in request", "application/json", http.StatusBadRequest)
 			return
+		}
+		notes := r.URL.Query().Get("notes")
+		var editFile models.NewFile
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				errorMessageResponse(w, err.Error(), "application/json", http.StatusBadRequest)
+				return
+			}
+		}(r.Body)
+		buf, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal("request", err)
+		}
+		editFile.File = buf
+		editFile.Title = filename
+		if notes != "" {
+			editFile.Notes = notes
 		}
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -124,10 +160,6 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		if editFile.Title == "" {
-			editFile.Title = file.Title
-		}
-
 		if editFile.File == nil {
 			editFile.File = file.File
 		}
@@ -139,7 +171,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 		editFile.ID = file.ID
 		editFile.UserID = userID
 
-		newFile, newFileErr := database.Database.EditFile(editFile)
+		newFile, newFileErr := database.Database.EditFile(&editFile)
 		if newFileErr != nil {
 			if errors.As(newFileErr, &storage.ErrNoValues) {
 				errorMessageResponse(w, "no such file in db", "application/json", http.StatusConflict)

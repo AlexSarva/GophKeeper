@@ -3,6 +3,7 @@ package storagepg
 import (
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -41,9 +42,10 @@ from public.files where user_id = $1 and id = $2`,
 	return file, nil
 }
 
-func (d *PostgresDB) EditFile(file models.NewFile) (models.File, error) {
+func (d *PostgresDB) EditFile(file *models.NewFile) (models.File, error) {
 	var newFile models.File
-	resErr := d.database.Get(&newFile, `update public.cards 
+	log.Printf("%+v\n", file)
+	resErr := d.database.Get(&newFile, `update public.files 
 set title = $1,
     file = $2,
     notes = $3,

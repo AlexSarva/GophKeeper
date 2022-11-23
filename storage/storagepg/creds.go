@@ -30,7 +30,7 @@ from public.creds where user_id = $1 order by changed desc nulls last, created d
 	return creds, nil
 }
 
-func (d *PostgresDB) GetCred(credID uuid.UUID, userID uuid.UUID) (models.Cred, error) {
+func (d *PostgresDB) GetCred(credID, userID uuid.UUID) (models.Cred, error) {
 	var cred models.Cred
 	resErr := d.database.Get(&cred, `select id, title, login, passwd, notes, created, changed
 from public.creds where user_id = $1 and id = $2`,
@@ -50,8 +50,8 @@ set title = $1,
     notes = $4,
     changed = now()
 where 1=1
-and user_id = $3
-and id = $4
+and user_id = $5
+and id = $6
 returning id, title, login, passwd, notes, created, changed;`,
 		cred.Title, cred.Login, cred.Passwd, cred.Notes, cred.UserID, cred.ID)
 	if resErr != nil {
