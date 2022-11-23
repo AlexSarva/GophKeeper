@@ -12,10 +12,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func PostNote(database *app.Storage) http.HandlerFunc {
+func PostFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var note models.NewNote
-		readBodyErr := readBodyInStruct(r, &note)
+		var file models.NewFile
+		readBodyErr := readBodyInStruct(r, &file)
 		if readBodyErr != nil {
 			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
 			return
@@ -26,19 +26,19 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
-		note.UserID = userID
+		file.UserID = userID
 
-		newNote, newNoteErr := database.Database.NewNote(&note)
-		if newNoteErr != nil {
-			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
+		newFile, newFileErr := database.Database.NewFile(&file)
+		if newFileErr != nil {
+			errorMessageResponse(w, newFileErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		resultResponse(w, newNote, "application/json", http.StatusCreated)
+		resultResponse(w, newFile, "application/json", http.StatusCreated)
 	}
 }
 
-func GetNoteList(database *app.Storage) http.HandlerFunc {
+func GetFileList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -47,21 +47,21 @@ func GetNoteList(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		notes, notesErr := database.Database.AllNotes(userID)
-		if notesErr != nil {
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+		files, filesErr := database.Database.AllFiles(userID)
+		if filesErr != nil {
+			errorMessageResponse(w, filesErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
-		if len(notes) == 0 {
+		if len(files) == 0 {
 			errorMessageResponse(w, "no values", "application/json", http.StatusNoContent)
 			return
 		}
 
-		resultResponse(w, notes, "application/json", http.StatusOK)
+		resultResponse(w, files, "application/json", http.StatusOK)
 	}
 }
 
-func GetNote(database *app.Storage) http.HandlerFunc {
+func GetFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -70,31 +70,31 @@ func GetNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		fileIDStr := chi.URLParam(r, "id")
+		fileUUID, fileUUIDErr := uuid.Parse(fileIDStr)
+		if fileUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		note, notesErr := database.Database.GetNote(noteUUID, userID)
-		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+		file, fileErr := database.Database.GetFile(fileUUID, userID)
+		if fileErr != nil {
+			if errors.As(fileErr, &storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, fileErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
-		resultResponse(w, note, "application/json", http.StatusOK)
+		resultResponse(w, file, "application/json", http.StatusOK)
 	}
 }
 
-func EditNote(database *app.Storage) http.HandlerFunc {
+func EditFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var editNote models.NewNote
-		readBodyErr := readBodyInStruct(r, &editNote)
+		var editFile models.NewFile
+		readBodyErr := readBodyInStruct(r, &editFile)
 		if readBodyErr != nil {
 			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
 			return
@@ -106,51 +106,55 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		fileIDStr := chi.URLParam(r, "id")
+		fileUUID, fileUUIDErr := uuid.Parse(fileIDStr)
+		if fileUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		note, notesErr := database.Database.GetNote(noteUUID, userID)
-		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
-				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
+		file, fileErr := database.Database.GetFile(fileUUID, userID)
+		if fileErr != nil {
+			if errors.As(fileErr, &storage.ErrNoValues) {
+				errorMessageResponse(w, "no such file in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, fileErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		if editNote.Title == "" {
-			editNote.Title = note.Title
+		if editFile.Title == "" {
+			editFile.Title = file.Title
 		}
 
-		if editNote.Note == "" {
-			editNote.Note = note.Note
+		if editFile.File == nil {
+			editFile.File = file.File
 		}
 
-		editNote.ID = note.ID
-		editNote.UserID = userID
+		if editFile.Notes == "" {
+			editFile.Notes = file.Notes
+		}
 
-		newNote, newNoteErr := database.Database.EditNote(editNote)
-		if newNoteErr != nil {
-			if errors.As(newNoteErr, &storage.ErrNoValues) {
-				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
+		editFile.ID = file.ID
+		editFile.UserID = userID
+
+		newFile, newFileErr := database.Database.EditFile(editFile)
+		if newFileErr != nil {
+			if errors.As(newFileErr, &storage.ErrNoValues) {
+				errorMessageResponse(w, "no such file in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, newFileErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		resultResponse(w, newNote, "application/json", http.StatusCreated)
+		resultResponse(w, newFile, "application/json", http.StatusCreated)
 	}
 }
 
-func DeleteNote(database *app.Storage) http.HandlerFunc {
+func DeleteFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -159,14 +163,14 @@ func DeleteNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		fileIDStr := chi.URLParam(r, "id")
+		fileUUID, fileUUIDErr := uuid.Parse(fileIDStr)
+		if fileUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		delErr := database.Database.DeleteNote(noteUUID, userID)
+		delErr := database.Database.DeleteFile(fileUUID, userID)
 		if delErr != nil {
 			if errors.As(delErr, &storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)

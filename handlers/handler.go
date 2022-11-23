@@ -172,6 +172,27 @@ func CustomHandler(database *app.Storage) *chi.Mux {
 				r.Patch("/{id}", EditNote(database))
 				r.Delete("/{id}", DeleteNote(database))
 			})
+			r.Route("/cards", func(r chi.Router) {
+				r.Get("/", GetCardList(database))
+				r.Post("/", PostCard(database))
+				r.Get("/{id}", GetCard(database))
+				r.Patch("/{id}", EditCard(database))
+				r.Delete("/{id}", DeleteCard(database))
+			})
+			r.Route("/creds", func(r chi.Router) {
+				r.Get("/", GetCredList(database))
+				r.Post("/", PostCred(database))
+				r.Get("/{id}", GetCred(database))
+				r.Patch("/{id}", EditCred(database))
+				r.Delete("/{id}", DeleteCred(database))
+			})
+			r.Route("/files", func(r chi.Router) {
+				r.Get("/", GetFileList(database))
+				r.Post("/", PostFile(database))
+				r.Get("/{id}", GetFile(database))
+				r.Patch("/{id}", EditFile(database))
+				r.Delete("/{id}", DeleteFile(database))
+			})
 		})
 	})
 

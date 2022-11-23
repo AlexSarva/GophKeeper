@@ -13,6 +13,7 @@ type PostgresDB struct {
 
 func PostgresDBConn(config string) *PostgresDB {
 	db, err := sqlx.Connect("postgres", config)
+	db.MustExec(ddl)
 	if err != nil {
 		log.Fatalln(err)
 	}

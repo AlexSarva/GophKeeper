@@ -12,10 +12,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func PostNote(database *app.Storage) http.HandlerFunc {
+func PostCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var note models.NewNote
-		readBodyErr := readBodyInStruct(r, &note)
+		var cred models.NewCred
+		readBodyErr := readBodyInStruct(r, &cred)
 		if readBodyErr != nil {
 			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
 			return
@@ -26,19 +26,19 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
-		note.UserID = userID
+		cred.UserID = userID
 
-		newNote, newNoteErr := database.Database.NewNote(&note)
-		if newNoteErr != nil {
-			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
+		newCred, newCredErr := database.Database.NewCred(&cred)
+		if newCredErr != nil {
+			errorMessageResponse(w, newCredErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		resultResponse(w, newNote, "application/json", http.StatusCreated)
+		resultResponse(w, newCred, "application/json", http.StatusCreated)
 	}
 }
 
-func GetNoteList(database *app.Storage) http.HandlerFunc {
+func GetCredList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -47,21 +47,21 @@ func GetNoteList(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		notes, notesErr := database.Database.AllNotes(userID)
-		if notesErr != nil {
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+		creds, credsErr := database.Database.AllCreds(userID)
+		if credsErr != nil {
+			errorMessageResponse(w, credsErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
-		if len(notes) == 0 {
+		if len(creds) == 0 {
 			errorMessageResponse(w, "no values", "application/json", http.StatusNoContent)
 			return
 		}
 
-		resultResponse(w, notes, "application/json", http.StatusOK)
+		resultResponse(w, creds, "application/json", http.StatusOK)
 	}
 }
 
-func GetNote(database *app.Storage) http.HandlerFunc {
+func GetCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -70,31 +70,31 @@ func GetNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		credIDStr := chi.URLParam(r, "id")
+		credUUID, credUUIDErr := uuid.Parse(credIDStr)
+		if credUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		note, notesErr := database.Database.GetNote(noteUUID, userID)
-		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+		cred, credErr := database.Database.GetCred(credUUID, userID)
+		if credErr != nil {
+			if errors.As(credErr, &storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, credErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
-		resultResponse(w, note, "application/json", http.StatusOK)
+		resultResponse(w, cred, "application/json", http.StatusOK)
 	}
 }
 
-func EditNote(database *app.Storage) http.HandlerFunc {
+func EditCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var editNote models.NewNote
-		readBodyErr := readBodyInStruct(r, &editNote)
+		var editCred models.NewCred
+		readBodyErr := readBodyInStruct(r, &editCred)
 		if readBodyErr != nil {
 			errorMessageResponse(w, readBodyErr.Error(), "application/json", http.StatusBadRequest)
 			return
@@ -106,51 +106,59 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		credIDStr := chi.URLParam(r, "id")
+		credUUID, credUUIDErr := uuid.Parse(credIDStr)
+		if credUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		note, notesErr := database.Database.GetNote(noteUUID, userID)
-		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
-				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
+		cred, credErr := database.Database.GetCred(credUUID, userID)
+		if credErr != nil {
+			if errors.As(credErr, &storage.ErrNoValues) {
+				errorMessageResponse(w, "no such cred in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, notesErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, credErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		if editNote.Title == "" {
-			editNote.Title = note.Title
+		if editCred.Title == "" {
+			editCred.Title = cred.Title
 		}
 
-		if editNote.Note == "" {
-			editNote.Note = note.Note
+		if editCred.Login == "" {
+			editCred.Login = cred.Login
 		}
 
-		editNote.ID = note.ID
-		editNote.UserID = userID
+		if editCred.Passwd == "" {
+			editCred.Passwd = cred.Passwd
+		}
 
-		newNote, newNoteErr := database.Database.EditNote(editNote)
-		if newNoteErr != nil {
-			if errors.As(newNoteErr, &storage.ErrNoValues) {
-				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
+		if editCred.Notes == "" {
+			editCred.Notes = cred.Notes
+		}
+
+		editCred.ID = cred.ID
+		editCred.UserID = userID
+
+		newCred, newCredErr := database.Database.EditCred(editCred)
+		if newCredErr != nil {
+			if errors.As(newCredErr, &storage.ErrNoValues) {
+				errorMessageResponse(w, "no such cred in db", "application/json", http.StatusConflict)
 				return
 			}
 
-			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, newCredErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		resultResponse(w, newNote, "application/json", http.StatusCreated)
+		resultResponse(w, newCred, "application/json", http.StatusCreated)
 	}
 }
 
-func DeleteNote(database *app.Storage) http.HandlerFunc {
+func DeleteCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userID, userIDErr := utils.GetUserID(ctx)
@@ -159,14 +167,14 @@ func DeleteNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
-		noteIDStr := chi.URLParam(r, "id")
-		noteUUID, noteUUIDErr := uuid.Parse(noteIDStr)
-		if noteUUIDErr != nil {
+		credIDStr := chi.URLParam(r, "id")
+		credUUID, credUUIDErr := uuid.Parse(credIDStr)
+		if credUUIDErr != nil {
 			errorMessageResponse(w, "Check ID please", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		delErr := database.Database.DeleteNote(noteUUID, userID)
+		delErr := database.Database.DeleteCred(credUUID, userID)
 		if delErr != nil {
 			if errors.As(delErr, &storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
