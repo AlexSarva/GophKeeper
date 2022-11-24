@@ -22,3 +22,9 @@ type NewFile struct {
 	File   []byte    `json:"file" db:"file"`
 	Notes  string    `json:"notes,omitempty" db:"notes"`
 }
+
+type NewClientFile struct {
+	Title string `json:"title" db:"title"`
+	File  string `json:"file" db:"file"`
+	Notes string `json:"notes,omitempty" db:"notes"`
+}

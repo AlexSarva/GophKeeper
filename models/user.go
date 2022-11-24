@@ -24,6 +24,12 @@ type User struct {
 	TokenExp time.Time `json:"token_expires" db:"token_expires"`
 }
 
+type UserRegister struct {
+	Username string `json:"username" db:"username"`
+	Email    string `json:"email" db:"email"`
+	Password string `json:"password" db:"passwd"`
+}
+
 type UserLogin struct {
 	Email    string `json:"email" db:"email"`
 	Password string `json:"password" db:"passwd"`

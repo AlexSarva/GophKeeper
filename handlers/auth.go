@@ -104,6 +104,8 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
+		userInfo.Password = ""
+
 		resultResponse(w, userInfo, "application/json", http.StatusOK)
 	}
 }
@@ -134,6 +136,7 @@ func GetUserInfo(database *app.Storage) http.HandlerFunc {
 			return
 		}
 
+		userInfo.Password = ""
 		resultResponse(w, userInfo, "application/json", http.StatusOK)
 	}
 }
