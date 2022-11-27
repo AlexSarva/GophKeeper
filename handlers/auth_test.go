@@ -242,18 +242,6 @@ func TestUserAuth(t *testing.T) {
 			Handler.ServeHTTP(w, request)
 			resp := w.Result()
 
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					log.Println(err)
-				}
-			}(resp.Body)
-			resBodyTmp, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Println(err)
-			}
-			log.Println(string(resBodyTmp))
-
 			// Проверяем StatusCode
 			respStatusCode := resp.StatusCode
 			wantStatusCode := tt.want.code
