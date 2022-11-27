@@ -38,7 +38,6 @@ func (gu *GUI) registerForm() {
 		//pages.SwitchToPage("Menu")
 		gu.panels.SetCurrentPanel("Main")
 	})
-	return
 }
 
 func (gu *GUI) loginForm() {
@@ -66,7 +65,6 @@ func (gu *GUI) loginForm() {
 	gu.forms.loginForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Main")
 	})
-	return
 }
 
 func (gu *GUI) newNoteForm() {
@@ -94,7 +92,6 @@ func (gu *GUI) newNoteForm() {
 	gu.forms.newNoteForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Notes")
 	})
-	return
 }
 
 func (gu *GUI) editNoteForm(note *models.Note) {
@@ -123,7 +120,6 @@ func (gu *GUI) editNoteForm(note *models.Note) {
 	gu.forms.editNoteForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Notes")
 	})
-	return
 }
 
 func (gu *GUI) newCardForm() {
@@ -186,7 +182,6 @@ func (gu *GUI) newCardForm() {
 	gu.forms.newCardForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Cards")
 	})
-	return
 }
 
 func (gu *GUI) editCardForm(card *models.Card) {
@@ -235,10 +230,8 @@ func (gu *GUI) editCardForm(card *models.Card) {
 	gu.forms.editCardForm.AddButton("Save", func() {
 		_, elemErr := gu.client.EditElement("cards", &editCard, card.ID)
 		if elemErr != nil {
-			if elemErr != nil {
-				gu.errorModalRender(elemErr.Error(), "EditCard")
-				return
-			}
+			gu.errorModalRender(elemErr.Error(), "EditCard")
+			return
 		}
 		if contentErr := gu.elementsContent("cards"); contentErr != nil {
 			gu.errorModalRender(contentErr.Error(), "Collection")
@@ -249,7 +242,6 @@ func (gu *GUI) editCardForm(card *models.Card) {
 	gu.forms.editCardForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Cards")
 	})
-	return
 }
 
 func (gu *GUI) newCredForm() {
@@ -282,7 +274,6 @@ func (gu *GUI) newCredForm() {
 	gu.forms.newCredForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Credentials")
 	})
-	return
 }
 
 func (gu *GUI) editCredForm(cred *models.Cred) {
@@ -315,7 +306,6 @@ func (gu *GUI) editCredForm(cred *models.Cred) {
 	gu.forms.editCredForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Credentials")
 	})
-	return
 }
 
 func (gu *GUI) newFileForm() {
@@ -370,7 +360,6 @@ func (gu *GUI) newFileForm() {
 	gu.forms.newFileForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Files")
 	})
-	return
 }
 
 func (gu *GUI) editFileForm(file *models.File) {
@@ -432,7 +421,6 @@ func (gu *GUI) editFileForm(file *models.File) {
 	gu.forms.editFileForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("Files")
 	})
-	return
 }
 
 func (gu *GUI) getFileForm(file *models.File) {
@@ -464,5 +452,4 @@ func (gu *GUI) getFileForm(file *models.File) {
 	gu.forms.getFileForm.AddButton("Back", func() {
 		gu.panels.SetCurrentPanel("File")
 	})
-	return
 }
