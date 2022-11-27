@@ -1,20 +1,23 @@
 package handlers
 
 import (
+	"AlexSarva/GophKeeper/authorizer"
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"database/sql"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
+	"net/mail"
+	"strings"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // UserRegistration - user registration method
 //
-// Handler POST /api/v1/admin/register
+// Handler POST /api/v1/register
 //
 // Registration is performed by a pair of login/password.
 // Each login must be set.
@@ -29,8 +32,9 @@ import (
 // 201 - user successfully registered and authenticated;
 // 400 - invalid request format;
 // 409 - login is already taken;
+// 417 - if login or password not valid;
 // 500 - an internal server error.
-func UserRegistration(database *app.Database) http.HandlerFunc {
+func UserRegistration(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var user models.User
 		readBodyErr := readBodyInStruct(r, &user)
@@ -43,39 +47,43 @@ func UserRegistration(database *app.Database) http.HandlerFunc {
 			return
 		}
 
-		userID := uuid.New()
-		userToken, userTokenExp := GenerateToken(userID)
-		hashedPassword, bcrypteErr := bcrypt.GenerateFromPassword([]byte(user.Password), 4)
-		if bcrypteErr != nil {
-			errorMessageResponse(w, ErrCryptPassword.Error(), "application/json", http.StatusBadRequest)
+		strongPassErr := database.PasswordChecker.VerifyPassword(user.Password)
+		if strongPassErr != nil {
+			errorMessageResponse(w, strongPassErr.Error(), "application/json", http.StatusExpectationFailed)
 			return
 		}
 
-		user.ID, user.Password, user.Token, user.TokenExp = userID, string(hashedPassword), userToken, userTokenExp
+		_, emailCheckErr := mail.ParseAddress(user.Email)
+		if emailCheckErr != nil {
+			errorMessageResponse(w, emailCheckErr.Error(), "application/json", http.StatusExpectationFailed)
+			return
+		}
 
-		newUserErr := database.Admin.Register(user)
+		user.ID = uuid.New()
+		newUser, newUserErr := database.Authorizer.SignUp(user)
+
 		if newUserErr != nil {
-			if newUserErr == storage.ErrDuplicatePK {
+			if errors.Is(newUserErr, storage.ErrDuplicatePK) {
 				errorMessageResponse(w, ErrLoginExist.Error(), "application/json", http.StatusConflict)
 				return
 			}
+
+			if errors.Is(newUserErr, authorizer.ErrHashPassword) || errors.Is(newUserErr, authorizer.ErrGenerateToken) {
+				errorMessageResponse(w, newUserErr.Error(), "application/json", http.StatusBadRequest)
+				return
+			}
+
 			errorMessageResponse(w, newUserErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
-		userInfo, userInfoErr := database.Admin.GetUserInfo(userID)
-		if userInfoErr != nil {
-			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
-			return
-		}
-
-		resultResponse(w, userInfo, "application/json", http.StatusCreated)
+		resultResponse(w, newUser, "application/json", http.StatusCreated)
 	}
 }
 
 // UserAuthentication - user authentication method
 //
-// Handler POST /api/v1/admin/login
+// Handler POST /api/v1/login
 //
 // Authentication is performed by a login/password pair.
 // Request format:
@@ -88,7 +96,7 @@ func UserRegistration(database *app.Database) http.HandlerFunc {
 // 400 - invalid request format;
 // 401 - invalid login/password pair;
 // 500 - an internal server error.
-func UserAuthentication(database *app.Database) http.HandlerFunc {
+func UserAuthentication(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var user models.UserLogin
@@ -98,29 +106,72 @@ func UserAuthentication(database *app.Database) http.HandlerFunc {
 			return
 		}
 
-		passwdDB, passwdDBErr := database.Admin.Login(user.Email)
-		if passwdDBErr != nil {
-			if errors.Is(passwdDBErr, sql.ErrNoRows) {
-				errorMessageResponse(w, ErrNoUserExists.Error(), "application/json", http.StatusUnauthorized)
+		userInfo, userInfoErr := database.Authorizer.SignIn(&user)
+		if userInfoErr != nil {
+			if errors.Is(userInfoErr, authorizer.ErrNoUserExists) {
+				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
 				return
 			}
-			errorMessageResponse(w, passwdDBErr.Error(), "application/json", http.StatusInternalServerError)
+			if errors.Is(userInfoErr, authorizer.ErrComparePassword) {
+				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
+				return
+			}
+			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
+			return
+		}
+		userInfo.Password = ""
+
+		log.Println(userInfo.Token)
+
+		jwt := strings.Split(userInfo.Token, " ")[1]
+
+		_, userIDErr := database.Authorizer.ParseToken(jwt)
+		if userIDErr != nil {
+			if strings.Contains(userIDErr.Error(), "token is expired") {
+				userNewInfo, userInfErr := database.Authorizer.RenewToken(*userInfo)
+				if userInfErr != nil {
+					errorMessageResponse(w, userInfErr.Error(), "application/json", http.StatusInternalServerError)
+					return
+				}
+				userNewInfo.Password = ""
+				resultResponse(w, userNewInfo, "application/json", http.StatusOK)
+			}
+
+			errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", userIDErr), "application/json", http.StatusForbidden)
 			return
 		}
 
-		cryptErr := bcrypt.CompareHashAndPassword([]byte(passwdDB.Password), []byte(user.Password))
-		if cryptErr != nil {
-			errorMessageResponse(w, ErrComparePassword.Error(), "application/json", http.StatusUnauthorized)
+		resultResponse(w, userInfo, "application/json", http.StatusOK)
+	}
+}
+
+// GetUserInfo - user info method
+//
+// Handler GET /api/v1/users/me
+//
+// Authorization: "Bearer T"
+//
+// Possible response codes:
+// 200 - load user information;
+// 400 - invalid request format;
+// 401 - invalid auth;
+// 500 - an internal server error.
+func GetUserInfo(database *app.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		userID, userIDErr := getUserID(ctx)
+		if userIDErr != nil {
+			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
-		// TODO Предусмотреть обновление куки
 
-		userInfo, userInfoErr := database.Admin.GetUserInfo(passwdDB.ID)
+		userInfo, userInfoErr := database.Admin.GetUserInfo(userID)
 		if userInfoErr != nil {
-			errorMessageResponse(w, "Internal Server Error "+userInfoErr.Error(), "application/json", http.StatusInternalServerError)
+			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
 
+		userInfo.Password = ""
 		resultResponse(w, userInfo, "application/json", http.StatusOK)
 	}
 }

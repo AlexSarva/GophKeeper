@@ -1,0 +1,9 @@
+{
+  "server_address": "localhost:8005",
+  "database_dsn": "user=sarva password=77oFnWFF dbname=gophkeeper sslmode=disable",
+  "admin_database_dsn" : "user=sarva password=77oFnWFF dbname=gophkeeper sslmode=disable",
+  "enable_https": false,
+  "trusted_subnet": "",
+  "secret" : "8UEu47#1&Y",
+  "cors": "https://* http://*"
+}

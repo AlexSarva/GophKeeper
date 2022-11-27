@@ -14,7 +14,7 @@ var (
 	buildVersion = "N/A"
 	buildDate    = "N/A"
 	buildCommit  = "N/A"
-	cfg          models.Config
+	cfg          models.ServerConfig
 	JSONConfig   models.JSONConfig
 )
 
@@ -49,7 +49,7 @@ func main() {
 
 	if cfg.Database == "" && !cfg.EnableHTTPS && cfg.TrustedSubnet == "" && cfg.Secret == "" && cfg.CORS == "" {
 		if configFilename := JSONConfig.DSN; configFilename != "" {
-			JSONErr := models.ReadJSONConfig(&cfg, configFilename)
+			JSONErr := models.ReadServerJSONConfig(&cfg, configFilename)
 			if JSONErr != nil {
 				log.Fatalf("Wrong json format: %+v", JSONErr)
 			}

@@ -20,21 +20,10 @@ import (
 )
 
 var (
-	ErrJsonWrite        = errors.New("problem in writing json")
-	ErrCryptPassword    = errors.New("problem is crypt password")
-	ErrComparePassword  = errors.New("password doesnt match")
-	ErrJsonRequest      = errors.New("wrong type provided for fields")
-	ErrLoginExist       = errors.New("login is already busy")
-	ErrNoUserExists     = errors.New("user doesnt exist in database")
-	ErrUnauthorized     = errors.New("user unauthorized")
-	ErrPermissionDenied = errors.New("you dont have permissions to use this method")
-)
-
-var (
-	adminRole      = []string{"admin"}
-	maintainerRole = []string{"admin", "maintainer"}
-	developerRole  = []string{"admin", "maintainer", "developer"}
-	allRoles       = []string{"admin", "maintainer", "developer", "user"}
+	ErrJSONWrite    = errors.New("problem in writing json")
+	ErrJSONRequest  = errors.New("wrong type provided for fields")
+	ErrLoginExist   = errors.New("login is already busy")
+	ErrUnauthorized = errors.New("user unauthorized")
 )
 
 // errorMessageResponse additional respond generator
@@ -57,7 +46,7 @@ func errorMessageResponse(w http.ResponseWriter, message, ContentType string, ht
 func resultResponse(w http.ResponseWriter, data interface{}, ContentType string, httpStatusCode int) {
 	jsonResp, jsonRespErr := json.Marshal(data)
 	if jsonRespErr != nil {
-		errorMessageResponse(w, ErrJsonWrite.Error(), "application/json", http.StatusBadRequest)
+		errorMessageResponse(w, ErrJSONWrite.Error(), "application/json", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", ContentType)
@@ -108,8 +97,8 @@ func readBodyInStruct(r *http.Request, data interface{}) error {
 	errDecode := decoder.Decode(&data)
 
 	if errDecode != nil {
-		if errors.As(errDecode, &unmarshalErr) {
-			return ErrJsonRequest
+		if errors.Is(errDecode, unmarshalErr) {
+			return ErrJSONRequest
 		}
 		return errDecode
 	}
@@ -119,21 +108,19 @@ func readBodyInStruct(r *http.Request, data interface{}) error {
 // gzipContentTypes request types that support data compression
 var gzipContentTypes = "application/x-gzip, application/javascript, application/json, text/css, text/html, text/plain, text/xml"
 
-func CustomAllowOriginFunc(_ *http.Request, origin string) bool {
-	cfg := constant.GlobalContainer.Get("server-config").(models.Config)
+func customAllowOriginFunc(_ *http.Request, origin string) bool {
+	cfg := constant.GlobalContainer.Get("server-config").(models.ServerConfig)
 	urls := strings.Fields(cfg.CORS)
 	corsMap := make(map[string]bool)
 	for i := 0; i < len(urls); i += 1 {
 		corsMap[urls[i]] = true
 	}
-	if corsMap[origin] {
-		return true
-	}
-	return false
+	return corsMap[origin]
 }
 
-// Ping returns pong
-func Ping(w http.ResponseWriter, _ *http.Request) {
+// ping returns pong
+func ping(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("pong"))
 	if err != nil {
 		log.Println(err)
@@ -142,10 +129,10 @@ func Ping(w http.ResponseWriter, _ *http.Request) {
 
 // CustomHandler - the main_admin_test handler of the server
 // contains middlewares and all routes
-func CustomHandler(database *app.Database) *chi.Mux {
+func CustomHandler(database *app.Storage) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
-		AllowOriginFunc: CustomAllowOriginFunc,
+		AllowOriginFunc: customAllowOriginFunc,
 		//AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
@@ -159,15 +146,52 @@ func CustomHandler(database *app.Database) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.AllowContentEncoding("gzip"))
-	r.Use(middleware.AllowContentType("application/json", "text/plain", "application/x-gzip"))
+	//r.Use(middleware.AllowContentType("application/json", "text/plain", "application/x-gzip"))
 	r.Use(middleware.Compress(5, gzipContentTypes))
 	r.Use(checkContent)
 	r.Mount("/debug", middleware.Profiler())
 	//
-	r.Put("/ping", Ping)
+	r.Put("/ping", ping)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", UserRegistration(database))
 		r.Post("/login", UserAuthentication(database))
+
+		r.Route("/users", func(r chi.Router) {
+			r.Use(userIdentification(database))
+			r.Get("/me", GetUserInfo(database))
+		})
+
+		r.Route("/info", func(r chi.Router) {
+			r.Use(userIdentification(database))
+			r.Route("/notes", func(r chi.Router) {
+				r.Get("/", GetNoteList(database))
+				r.Post("/", PostNote(database))
+				r.Get("/{id}", GetNote(database))
+				r.Patch("/{id}", EditNote(database))
+				r.Delete("/{id}", DeleteNote(database))
+			})
+			r.Route("/cards", func(r chi.Router) {
+				r.Get("/", GetCardList(database))
+				r.Post("/", PostCard(database))
+				r.Get("/{id}", GetCard(database))
+				r.Patch("/{id}", EditCard(database))
+				r.Delete("/{id}", DeleteCard(database))
+			})
+			r.Route("/creds", func(r chi.Router) {
+				r.Get("/", GetCredList(database))
+				r.Post("/", PostCred(database))
+				r.Get("/{id}", GetCred(database))
+				r.Patch("/{id}", EditCred(database))
+				r.Delete("/{id}", DeleteCred(database))
+			})
+			r.Route("/files", func(r chi.Router) {
+				r.Get("/", GetFileList(database))
+				r.Post("/", PostFile(database))
+				r.Get("/{id}", GetFile(database))
+				r.Patch("/{id}", EditFile(database))
+				r.Delete("/{id}", DeleteFile(database))
+			})
+		})
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
