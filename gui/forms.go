@@ -25,7 +25,7 @@ func (gu *GUI) registerForm() {
 		user, userErr := gu.client.Register(&register)
 		if userErr != nil {
 			gu.texts.ChangeAuthText(userErr.Error(), false)
-			gu.errorModalRender(userErr.Error(), "Main")
+			gu.errorModalRender(userErr.Error(), "Register")
 			return
 		}
 		gu.texts.ChangeAuthText("", true)

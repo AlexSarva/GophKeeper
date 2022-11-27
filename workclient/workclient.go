@@ -179,6 +179,9 @@ func (c *Client) Register(userInfo *models.UserRegister) (*models.User, error) {
 		if res.StatusCode == 409 {
 			return nil, ErrUserExist
 		}
+		if res.StatusCode == 417 {
+			return nil, errors.New(res.String())
+		}
 		if res.StatusCode == 500 {
 			return nil, ErrInternalServer
 		}

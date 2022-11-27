@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/mail"
 	"strings"
 
 	"github.com/google/uuid"
@@ -43,6 +44,18 @@ func UserRegistration(database *app.Storage) http.HandlerFunc {
 		}
 		if user.Email == "" || user.Password == "" || user.Username == "" {
 			errorMessageResponse(w, "empty fields error", "application/json", http.StatusBadRequest)
+			return
+		}
+
+		strongPassErr := database.PasswordChecker.VerifyPassword(user.Password)
+		if strongPassErr != nil {
+			errorMessageResponse(w, strongPassErr.Error(), "application/json", http.StatusExpectationFailed)
+			return
+		}
+
+		_, emailCheckErr := mail.ParseAddress(user.Email)
+		if emailCheckErr != nil {
+			errorMessageResponse(w, emailCheckErr.Error(), "application/json", http.StatusExpectationFailed)
 			return
 		}
 
