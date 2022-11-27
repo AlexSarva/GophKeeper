@@ -241,15 +241,13 @@ func TestUserAuth(t *testing.T) {
 			w := httptest.NewRecorder()
 			Handler.ServeHTTP(w, request)
 			resp := w.Result()
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					log.Println(err)
-				}
-			}(resp.Body)
 
 			// Проверяем StatusCode
 			respStatusCode := resp.StatusCode
+			err := resp.Body.Close()
+			if err != nil {
+				log.Println(err)
+			}
 			wantStatusCode := tt.want.code
 			assert.Equal(t, wantStatusCode, respStatusCode, fmt.Errorf("expected StatusCode %d, got %d", wantStatusCode, respStatusCode))
 		})
