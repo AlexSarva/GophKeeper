@@ -29,7 +29,6 @@ type NewFile struct {
 func (nf *NewFile) SymEncrypt(symmCrypt *symmetric.SymmetricCrypto) {
 	cryptFile := symmCrypt.Encrypt(nf.File)
 	nf.File = cryptFile
-	return
 }
 
 func (f *File) SymDecrypt(symCrypt *symmetric.SymmetricCrypto) error {
