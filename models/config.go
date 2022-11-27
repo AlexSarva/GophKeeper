@@ -50,7 +50,7 @@ func ReadServerJSONConfig(cfg *ServerConfig, JSONFilepath string) error {
 	err := decoder.Decode(&cfg)
 
 	if err != nil {
-		if errors.As(err, &unmarshalConfigErr) {
+		if errors.Is(err, unmarshalConfigErr) {
 			return err
 		} else {
 			return err
@@ -80,7 +80,7 @@ func ReadClientJSONConfig(cfg *GUIConfig, JSONFilepath string) error {
 	err := decoder.Decode(&cfg)
 
 	if err != nil {
-		if errors.As(err, &unmarshalConfigErr) {
+		if errors.Is(err, unmarshalConfigErr) {
 			return err
 		} else {
 			return err

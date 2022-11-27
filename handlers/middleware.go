@@ -4,11 +4,22 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/utils"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
+)
+
+var ErrGetUserID = errors.New("cant get userID from ctx")
+
+type JWTUserID string
+
+const (
+	keyPrincipalID JWTUserID = "user.id"
 )
 
 // checkContent checking content-length and content-type in basic methods of requests
@@ -61,10 +72,18 @@ func userIdentification(database *app.Storage) func(next http.Handler) http.Hand
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), "user.id", userID)
+			ctx := context.WithValue(r.Context(), keyPrincipalID, userID)
 			r = r.WithContext(ctx)
 			next.ServeHTTP(w, r)
 		}
 		return http.HandlerFunc(fn)
 	}
+}
+
+func GetUserID(ctx context.Context) (uuid.UUID, error) {
+	userID, ok := ctx.Value(keyPrincipalID).(uuid.UUID)
+	if !ok {
+		return uuid.UUID{}, ErrGetUserID
+	}
+	return userID, nil
 }

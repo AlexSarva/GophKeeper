@@ -51,11 +51,11 @@ func (r *RSAConf) InitCrypto() error {
 		if keyPairErr != nil {
 			return keyPairErr
 		}
-		savePrivateErr := r.saveIdRsa(keyPair)
+		savePrivateErr := r.saveIDRsa(keyPair)
 		if savePrivateErr != nil {
 			return savePrivateErr
 		}
-		savePubErr := r.saveIdRsaPub(keyPair)
+		savePubErr := r.saveIDRsaPub(keyPair)
 		if savePubErr != nil {
 			return savePubErr
 		}
@@ -80,7 +80,7 @@ func (r *RSAConf) generateKeyPair() (*rsa.PrivateKey, error) {
 	return keyPair, nil
 }
 
-func (r *RSAConf) saveIdRsa(keyPair *rsa.PrivateKey) error {
+func (r *RSAConf) saveIDRsa(keyPair *rsa.PrivateKey) error {
 	// private key stream
 	privateKeyBlock := &pem.Block{
 		Type:  "PRIVATE KEY",
@@ -101,7 +101,7 @@ func (r *RSAConf) saveIdRsa(keyPair *rsa.PrivateKey) error {
 	return nil
 }
 
-func (r *RSAConf) saveIdRsaPub(keyPair *rsa.PrivateKey) error {
+func (r *RSAConf) saveIDRsaPub(keyPair *rsa.PrivateKey) error {
 	// public key stream
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&keyPair.PublicKey)
 	if err != nil {
@@ -126,7 +126,7 @@ func (r *RSAConf) saveIdRsaPub(keyPair *rsa.PrivateKey) error {
 	return nil
 }
 
-func (r *RSAConf) getIdRsa() (*rsa.PrivateKey, error) {
+func (r *RSAConf) getIDRsa() (*rsa.PrivateKey, error) {
 	keyData, err := os.ReadFile(r.idRsa)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (r *RSAConf) getIdRsa() (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func (r *RSAConf) getIdRsaPub() (*rsa.PublicKey, error) {
+func (r *RSAConf) getIDRsaPub() (*rsa.PublicKey, error) {
 	keyData, err := os.ReadFile(r.idRsaPub)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (r *RSAConf) Sign(payload string) (string, error) {
 	msg := strings.TrimSpace(strings.ToLower(replacer.Replace(payload)))
 	hashed := sha256.Sum256([]byte(msg))
 
-	privateKey, privateKeyErr := r.getIdRsa()
+	privateKey, privateKeyErr := r.getIDRsa()
 	if privateKeyErr != nil {
 		return "", privateKeyErr
 	}
@@ -202,7 +202,7 @@ func (r *RSAConf) Verify(payload string, signature64 string) bool {
 	msg := strings.TrimSpace(strings.ToLower(replacer.Replace(payload)))
 	hashed := sha256.Sum256([]byte(msg))
 
-	publicKey, publicKeyErr := r.getIdRsaPub()
+	publicKey, publicKeyErr := r.getIDRsaPub()
 	if publicKeyErr != nil {
 		log.Println(publicKeyErr)
 		return false
@@ -222,7 +222,7 @@ func (r *RSAConf) Encrypt(payload string) (string, error) {
 	rnd := rand.Reader
 	hash := sha256.New()
 
-	publicKey, publicKeyErr := r.getIdRsaPub()
+	publicKey, publicKeyErr := r.getIDRsaPub()
 	if publicKeyErr != nil {
 		return "", publicKeyErr
 	}
@@ -248,7 +248,7 @@ func (r *RSAConf) Decrypt(payload string) (string, error) {
 	rnd := rand.Reader
 	hash := sha256.New()
 
-	privateKey, privateKeyErr := r.getIdRsa()
+	privateKey, privateKeyErr := r.getIDRsa()
 	if privateKeyErr != nil {
 		return "", privateKeyErr
 	}

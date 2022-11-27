@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	ErrJsonWrite    = errors.New("problem in writing json")
-	ErrJsonRequest  = errors.New("wrong type provided for fields")
+	ErrJSONWrite    = errors.New("problem in writing json")
+	ErrJSONRequest  = errors.New("wrong type provided for fields")
 	ErrLoginExist   = errors.New("login is already busy")
 	ErrUnauthorized = errors.New("user unauthorized")
 )
@@ -46,7 +46,7 @@ func errorMessageResponse(w http.ResponseWriter, message, ContentType string, ht
 func resultResponse(w http.ResponseWriter, data interface{}, ContentType string, httpStatusCode int) {
 	jsonResp, jsonRespErr := json.Marshal(data)
 	if jsonRespErr != nil {
-		errorMessageResponse(w, ErrJsonWrite.Error(), "application/json", http.StatusBadRequest)
+		errorMessageResponse(w, ErrJSONWrite.Error(), "application/json", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", ContentType)
@@ -97,8 +97,8 @@ func readBodyInStruct(r *http.Request, data interface{}) error {
 	errDecode := decoder.Decode(&data)
 
 	if errDecode != nil {
-		if errors.As(errDecode, &unmarshalErr) {
-			return ErrJsonRequest
+		if errors.Is(errDecode, unmarshalErr) {
+			return ErrJSONRequest
 		}
 		return errDecode
 	}
@@ -115,10 +115,7 @@ func CustomAllowOriginFunc(_ *http.Request, origin string) bool {
 	for i := 0; i < len(urls); i += 1 {
 		corsMap[urls[i]] = true
 	}
-	if corsMap[origin] {
-		return true
-	}
-	return false
+	return corsMap[origin]
 }
 
 // Ping returns pong

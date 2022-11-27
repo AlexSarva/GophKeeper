@@ -80,7 +80,7 @@ func (a *Authorizer) SignUp(user models.User) (*models.User, error) {
 func (a *Authorizer) SignIn(userLogin *models.UserLogin) (*models.User, error) {
 	userCred, err := a.adminDB.Login(userLogin)
 	if err != nil {
-		if errors.As(sql.ErrNoRows, &err) {
+		if errors.Is(sql.ErrNoRows, err) {
 			return nil, ErrNoUserExists
 		}
 		return nil, err

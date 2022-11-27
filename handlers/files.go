@@ -4,7 +4,6 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"io"
 	"log"
@@ -40,7 +39,7 @@ func PostFile(database *app.Storage) http.HandlerFunc {
 			log.Fatal("request", err)
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -66,7 +65,7 @@ func PostFile(database *app.Storage) http.HandlerFunc {
 func GetFileList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -89,7 +88,7 @@ func GetFileList(database *app.Storage) http.HandlerFunc {
 func GetFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -104,7 +103,7 @@ func GetFile(database *app.Storage) http.HandlerFunc {
 
 		file, fileErr := database.Database.GetFile(fileUUID, userID)
 		if fileErr != nil {
-			if errors.As(fileErr, &storage.ErrNoValues) {
+			if errors.Is(fileErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -148,7 +147,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 			editFile.Notes = notes
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -163,7 +162,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 
 		file, fileErr := database.Database.GetFile(fileUUID, userID)
 		if fileErr != nil {
-			if errors.As(fileErr, &storage.ErrNoValues) {
+			if errors.Is(fileErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such file in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -185,7 +184,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 
 		newFile, newFileErr := database.Database.EditFile(&editFile)
 		if newFileErr != nil {
-			if errors.As(newFileErr, &storage.ErrNoValues) {
+			if errors.Is(newFileErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such file in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -201,7 +200,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 func DeleteFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -216,7 +215,7 @@ func DeleteFile(database *app.Storage) http.HandlerFunc {
 
 		delErr := database.Database.DeleteFile(fileUUID, userID)
 		if delErr != nil {
-			if errors.As(delErr, &storage.ErrNoValues) {
+			if errors.Is(delErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}

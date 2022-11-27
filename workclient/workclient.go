@@ -55,7 +55,6 @@ func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interf
 			decrCards = append(decrCards, card)
 		}
 		res = decrCards
-		break
 	case "notes":
 		var notes []models.Note
 		if respErr := r.JSON(&notes); respErr != nil {
@@ -69,7 +68,6 @@ func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interf
 			descrNotes = append(descrNotes, note)
 		}
 		res = descrNotes
-		break
 	case "files":
 		var files []models.File
 		if respErr := r.JSON(&files); respErr != nil {
@@ -83,7 +81,6 @@ func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interf
 			descrFiles = append(descrFiles, file)
 		}
 		res = descrFiles
-		break
 	case "creds":
 		var creds []models.Cred
 		if respErr := r.JSON(&creds); respErr != nil {
@@ -97,7 +94,6 @@ func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interf
 			descrCreds = append(descrCreds, cred)
 		}
 		res = descrCreds
-		break
 	}
 	return res, nil
 }
@@ -136,7 +132,7 @@ func switchType(infoType string, r *gentleman.Response) (interface{}, error) {
 // Client custom type of work client
 type Client struct {
 	client      *gentleman.Client
-	baseUrl     string
+	baseURL     string
 	cryptorizer *crypto.Cryptorizer
 	symmCrypto  *symmetric.SymmetricCrypto
 }
@@ -150,7 +146,7 @@ func InitClient(cfg *models.GUIConfig) (*Client, error) {
 	symmCrypto := symmetric.SymmCrypto(cfg.Secret)
 	return &Client{
 		client:      cli,
-		baseUrl:     cfg.ServerAddress,
+		baseURL:     cfg.ServerAddress,
 		cryptorizer: cryptorizer,
 		symmCrypto:  symmCrypto,
 	}, nil
@@ -167,7 +163,7 @@ func (c *Client) UseToken(bearer string) *Client {
 func (c *Client) Register(userInfo *models.UserRegister) (*models.User, error) {
 	var user *models.User
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/register", c.baseUrl))
+	req.URL(fmt.Sprintf("%s/register", c.baseURL))
 	req.Method("POST")
 	req.SetHeader("Content-Type", "application/json")
 	req.Use(body.JSON(userInfo))
@@ -202,7 +198,7 @@ func (c *Client) Register(userInfo *models.UserRegister) (*models.User, error) {
 func (c *Client) Login(userInfo *models.UserLogin) (*models.User, error) {
 	var user *models.User
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/login", c.baseUrl))
+	req.URL(fmt.Sprintf("%s/login", c.baseURL))
 	req.Method("POST")
 	req.SetHeader("Content-Type", "application/json")
 	req.Use(body.JSON(userInfo))
@@ -237,7 +233,7 @@ func (c *Client) Login(userInfo *models.UserLogin) (*models.User, error) {
 func (c *Client) Me() (*models.User, error) {
 	var user *models.User
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/users/me", c.baseUrl))
+	req.URL(fmt.Sprintf("%s/users/me", c.baseURL))
 	req.Method("GET")
 	res, err := req.Send()
 	if err != nil {
@@ -262,7 +258,7 @@ func (c *Client) Me() (*models.User, error) {
 // ElementList returns list of elements of selected type
 func (c *Client) ElementList(infoType string) (interface{}, error) {
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/info/%s", c.baseUrl, infoType))
+	req.URL(fmt.Sprintf("%s/info/%s", c.baseURL, infoType))
 	req.Method("GET")
 	res, err := req.Send()
 	if err != nil {
@@ -289,7 +285,7 @@ func (c *Client) ElementList(infoType string) (interface{}, error) {
 // Element returns element of selected type and id
 func (c *Client) Element(infoType string, id uuid.UUID) (interface{}, error) {
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseUrl, infoType, id))
+	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseURL, infoType, id))
 	req.Method("GET")
 	res, err := req.Send()
 	if err != nil {
@@ -319,7 +315,7 @@ func (c *Client) Element(infoType string, id uuid.UUID) (interface{}, error) {
 // AddElement provides add element of selected type in service
 func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, error) {
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/info/%s", c.baseUrl, infoType))
+	req.URL(fmt.Sprintf("%s/info/%s", c.baseURL, infoType))
 	req.Method("POST")
 
 	switch infoType {
@@ -332,21 +328,18 @@ func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, err
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(card))
-		break
 	case "creds":
 		cred := elem.(*models.NewCred)
 		if cryptoErr := cred.Encrypt(c.cryptorizer); cryptoErr != nil {
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(cred))
-		break
 	case "notes":
 		note := elem.(*models.NewNote)
 		if cryptoErr := note.Encrypt(c.cryptorizer); cryptoErr != nil {
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(note))
-		break
 	case "files":
 		file := elem.(*models.NewFile)
 		file.SymEncrypt(c.symmCrypto)
@@ -355,7 +348,6 @@ func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, err
 		req.Use(query.Set("filename", file.FileName))
 		f := io.NopCloser(bytes.NewBuffer(file.File))
 		req.Use(body.Reader(f))
-		break
 	default:
 		return nil, errors.New("wrong info type parameter")
 	}
@@ -388,7 +380,7 @@ func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, err
 // EditElement provides edit element of selected type in service
 func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (interface{}, error) {
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseUrl, infoType, id))
+	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseURL, infoType, id))
 	req.Method("PATCH")
 	switch infoType {
 	case "cards":
@@ -400,21 +392,18 @@ func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (i
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(card))
-		break
 	case "creds":
 		cred := elem.(*models.NewCred)
 		if cryptoErr := cred.Encrypt(c.cryptorizer); cryptoErr != nil {
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(cred))
-		break
 	case "notes":
 		note := elem.(*models.NewNote)
 		if cryptoErr := note.Encrypt(c.cryptorizer); cryptoErr != nil {
 			return nil, cryptoErr
 		}
 		req.Use(body.JSON(note))
-		break
 	case "files":
 		file := elem.(*models.NewFile)
 		file.SymEncrypt(c.symmCrypto)
@@ -423,7 +412,6 @@ func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (i
 		req.Use(query.Set("notes", file.Notes))
 		f := io.NopCloser(bytes.NewBuffer(file.File))
 		req.Use(body.Reader(f))
-		break
 	default:
 		return nil, errors.New("wrong info type parameter")
 	}
@@ -459,7 +447,7 @@ func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (i
 // Delete removes element from service by selected type and id
 func (c *Client) Delete(infoType string, id uuid.UUID) (bool, error) {
 	req := c.client.Request()
-	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseUrl, infoType, id))
+	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseURL, infoType, id))
 	req.Method("DELETE")
 	res, err := req.Send()
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"net/http"
 
@@ -21,7 +20,7 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -41,7 +40,7 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 func GetNoteList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -64,7 +63,7 @@ func GetNoteList(database *app.Storage) http.HandlerFunc {
 func GetNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -79,7 +78,7 @@ func GetNote(database *app.Storage) http.HandlerFunc {
 
 		note, notesErr := database.Database.GetNote(noteUUID, userID)
 		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+			if errors.Is(notesErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -100,7 +99,7 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -115,7 +114,7 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 
 		note, notesErr := database.Database.GetNote(noteUUID, userID)
 		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+			if errors.Is(notesErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -137,7 +136,7 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 
 		newNote, newNoteErr := database.Database.EditNote(editNote)
 		if newNoteErr != nil {
-			if errors.As(newNoteErr, &storage.ErrNoValues) {
+			if errors.Is(newNoteErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -153,7 +152,7 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 func DeleteNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -168,7 +167,7 @@ func DeleteNote(database *app.Storage) http.HandlerFunc {
 
 		delErr := database.Database.DeleteNote(noteUUID, userID)
 		if delErr != nil {
-			if errors.As(delErr, &storage.ErrNoValues) {
+			if errors.Is(delErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}

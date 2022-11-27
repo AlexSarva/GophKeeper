@@ -5,7 +5,6 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"fmt"
 	"log"
@@ -63,12 +62,12 @@ func UserRegistration(database *app.Storage) http.HandlerFunc {
 		newUser, newUserErr := database.Authorizer.SignUp(user)
 
 		if newUserErr != nil {
-			if errors.As(newUserErr, &storage.ErrDuplicatePK) {
+			if errors.Is(newUserErr, storage.ErrDuplicatePK) {
 				errorMessageResponse(w, ErrLoginExist.Error(), "application/json", http.StatusConflict)
 				return
 			}
 
-			if errors.As(newUserErr, &authorizer.ErrHashPassword) || errors.As(newUserErr, &authorizer.ErrGenerateToken) {
+			if errors.Is(newUserErr, authorizer.ErrHashPassword) || errors.Is(newUserErr, authorizer.ErrGenerateToken) {
 				errorMessageResponse(w, newUserErr.Error(), "application/json", http.StatusBadRequest)
 				return
 			}
@@ -108,11 +107,11 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 
 		userInfo, userInfoErr := database.Authorizer.SignIn(&user)
 		if userInfoErr != nil {
-			if errors.As(userInfoErr, &authorizer.ErrNoUserExists) {
+			if errors.Is(userInfoErr, authorizer.ErrNoUserExists) {
 				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
 				return
 			}
-			if errors.As(userInfoErr, &authorizer.ErrComparePassword) {
+			if errors.Is(userInfoErr, authorizer.ErrComparePassword) {
 				errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusUnauthorized)
 				return
 			}
@@ -159,7 +158,7 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 func GetUserInfo(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return

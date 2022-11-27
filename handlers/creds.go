@@ -4,7 +4,6 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"net/http"
 
@@ -21,7 +20,7 @@ func PostCred(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -41,7 +40,7 @@ func PostCred(database *app.Storage) http.HandlerFunc {
 func GetCredList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -64,7 +63,7 @@ func GetCredList(database *app.Storage) http.HandlerFunc {
 func GetCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -79,7 +78,7 @@ func GetCred(database *app.Storage) http.HandlerFunc {
 
 		cred, credErr := database.Database.GetCred(credUUID, userID)
 		if credErr != nil {
-			if errors.As(credErr, &storage.ErrNoValues) {
+			if errors.Is(credErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -100,7 +99,7 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -115,7 +114,7 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 
 		cred, credErr := database.Database.GetCred(credUUID, userID)
 		if credErr != nil {
-			if errors.As(credErr, &storage.ErrNoValues) {
+			if errors.Is(credErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such cred in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -145,7 +144,7 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 
 		newCred, newCredErr := database.Database.EditCred(editCred)
 		if newCredErr != nil {
-			if errors.As(newCredErr, &storage.ErrNoValues) {
+			if errors.Is(newCredErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such cred in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -161,7 +160,7 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 func DeleteCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -176,7 +175,7 @@ func DeleteCred(database *app.Storage) http.HandlerFunc {
 
 		delErr := database.Database.DeleteCred(credUUID, userID)
 		if delErr != nil {
-			if errors.As(delErr, &storage.ErrNoValues) {
+			if errors.Is(delErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}

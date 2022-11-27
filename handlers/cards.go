@@ -4,7 +4,6 @@ import (
 	"AlexSarva/GophKeeper/internal/app"
 	"AlexSarva/GophKeeper/models"
 	"AlexSarva/GophKeeper/storage"
-	"AlexSarva/GophKeeper/utils"
 	"errors"
 	"net/http"
 
@@ -21,7 +20,7 @@ func PostCard(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -41,7 +40,7 @@ func PostCard(database *app.Storage) http.HandlerFunc {
 func GetCardList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -64,7 +63,7 @@ func GetCardList(database *app.Storage) http.HandlerFunc {
 func GetCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -79,7 +78,7 @@ func GetCard(database *app.Storage) http.HandlerFunc {
 
 		card, notesErr := database.Database.GetCard(cardUUID, userID)
 		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+			if errors.Is(notesErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -100,7 +99,7 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -115,7 +114,7 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 
 		card, notesErr := database.Database.GetCard(cardUUID, userID)
 		if notesErr != nil {
-			if errors.As(notesErr, &storage.ErrNoValues) {
+			if errors.Is(notesErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such card in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -149,7 +148,7 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 
 		newCard, newCardErr := database.Database.EditCard(editCard)
 		if newCardErr != nil {
-			if errors.As(newCardErr, &storage.ErrNoValues) {
+			if errors.Is(newCardErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such card in db", "application/json", http.StatusConflict)
 				return
 			}
@@ -165,7 +164,7 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 func DeleteCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := utils.GetUserID(ctx)
+		userID, userIDErr := GetUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -180,7 +179,7 @@ func DeleteCard(database *app.Storage) http.HandlerFunc {
 
 		delErr := database.Database.DeleteCard(cardUUID, userID)
 		if delErr != nil {
-			if errors.As(delErr, &storage.ErrNoValues) {
+			if errors.Is(delErr, storage.ErrNoValues) {
 				errorMessageResponse(w, "no such note in db", "application/json", http.StatusConflict)
 				return
 			}
