@@ -241,6 +241,12 @@ func TestUserAuth(t *testing.T) {
 			w := httptest.NewRecorder()
 			Handler.ServeHTTP(w, request)
 			resp := w.Result()
+			defer func(Body io.ReadCloser) {
+				err := Body.Close()
+				if err != nil {
+					log.Println(err)
+				}
+			}(resp.Body)
 
 			// Проверяем StatusCode
 			respStatusCode := resp.StatusCode
