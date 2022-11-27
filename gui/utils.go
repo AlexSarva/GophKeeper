@@ -48,7 +48,6 @@ func (gu *GUI) errorModalRender(errorText string, returnPage string) {
 		}
 	})
 	gu.panels.SetCurrentPanel("Mistake")
-	return
 }
 
 func (gu *GUI) fileHandler(file *models.File) {
@@ -61,11 +60,9 @@ func (gu *GUI) fileHandler(file *models.File) {
 			gu.panels.SetCurrentPanel("GetFile")
 			return
 		}
-
 		if buttonLabel == "Cancel" {
 			gu.panels.SetCurrentPanel("File")
 			return
 		}
 	})
-	return
 }
