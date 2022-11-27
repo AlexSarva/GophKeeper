@@ -109,7 +109,7 @@ func readBodyInStruct(r *http.Request, data interface{}) error {
 var gzipContentTypes = "application/x-gzip, application/javascript, application/json, text/css, text/html, text/plain, text/xml"
 
 func CustomAllowOriginFunc(_ *http.Request, origin string) bool {
-	cfg := constant.GlobalContainer.Get("server-config").(models.Config)
+	cfg := constant.GlobalContainer.Get("server-config").(models.ServerConfig)
 	urls := strings.Fields(cfg.CORS)
 	corsMap := make(map[string]bool)
 	for i := 0; i < len(urls); i += 1 {

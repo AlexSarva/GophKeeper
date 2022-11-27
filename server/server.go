@@ -17,14 +17,14 @@ import (
 // Server implementation of custom server
 type Server struct {
 	httpServer *http.Server
-	cfg        *models.Config
+	cfg        *models.ServerConfig
 	db         *app.Storage
 }
 
 // NewServer Initializing new server instance
 func NewServer() *Server {
 
-	cfg := constant.GlobalContainer.Get("server-config").(models.Config)
+	cfg := constant.GlobalContainer.Get("server-config").(models.ServerConfig)
 	db := *app.NewStorage()
 	handler := handlers.CustomHandler(&db)
 	server := http.Server{

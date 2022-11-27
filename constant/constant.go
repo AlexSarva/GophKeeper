@@ -11,7 +11,7 @@ var GlobalContainer di.Container
 var ErrInit = errors.New("error while initializing container")
 var ErrBuild = errors.New("error while building container")
 
-func BuildContainer(cfg models.Config) error {
+func BuildContainer(cfg models.ServerConfig) error {
 	builder, builderErr := di.NewBuilder()
 	if builderErr != nil {
 		return ErrBuild

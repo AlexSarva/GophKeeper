@@ -97,6 +97,37 @@ func (a *Authorizer) SignIn(userLogin *models.UserLogin) (*models.User, error) {
 	return userCred, nil
 }
 
+func (a *Authorizer) RenewToken(user models.User) (*models.User, error) {
+
+	expires := time.Now().Add(a.expireDuration)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: jwt.At(expires),
+			IssuedAt:  jwt.At(time.Now()),
+		},
+		UserID: user.ID,
+	})
+
+	tokenValue, tokenErr := token.SignedString(a.signingKey)
+	if tokenErr != nil {
+		return nil, ErrGenerateToken
+	}
+
+	user.Token = tokenValue
+	user.TokenExp = expires
+
+	err := a.adminDB.RenewToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Password = ""
+	user.Token = fmt.Sprintf("Bearer %s", user.Token)
+
+	return &user, nil
+}
+
 func (a *Authorizer) ParseToken(accessToken string) (uuid.UUID, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

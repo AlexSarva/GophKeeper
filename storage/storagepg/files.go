@@ -10,10 +10,10 @@ import (
 
 func (d *PostgresDB) NewFile(file *models.NewFile) (models.File, error) {
 	var newFile models.File
-	resErr := d.database.Get(&newFile, `insert into public.files (user_id, title, file, notes)
-values ($1, $2, $3, $4)
-returning id, title, file, notes, created, changed;`,
-		file.UserID, file.Title, file.File, file.Notes)
+	resErr := d.database.Get(&newFile, `insert into public.files (user_id, title, file_name, file, notes)
+values ($1, $2, $3, $4, $5)
+returning id, title, file, file_name, notes, created, changed;`,
+		file.UserID, file.Title, file.FileName, file.File, file.Notes)
 	if resErr != nil {
 		return models.File{}, resErr
 	}
@@ -22,7 +22,7 @@ returning id, title, file, notes, created, changed;`,
 
 func (d *PostgresDB) AllFiles(userID uuid.UUID) ([]models.File, error) {
 	var files []models.File
-	resErr := d.database.Select(&files, `select id, title, file, notes, created, changed
+	resErr := d.database.Select(&files, `select id, title, file_name, file, notes, created, changed
 from public.files where user_id = $1 order by changed desc nulls last, created desc`,
 		userID)
 	if resErr != nil {
@@ -33,7 +33,7 @@ from public.files where user_id = $1 order by changed desc nulls last, created d
 
 func (d *PostgresDB) GetFile(cardID uuid.UUID, userID uuid.UUID) (models.File, error) {
 	var file models.File
-	resErr := d.database.Get(&file, `select id, title, file, notes, created, changed
+	resErr := d.database.Get(&file, `select id, title, file_name, file, notes, created, changed
 from public.files where user_id = $1 and id = $2`,
 		userID, cardID)
 	if resErr != nil {
@@ -48,13 +48,14 @@ func (d *PostgresDB) EditFile(file *models.NewFile) (models.File, error) {
 	resErr := d.database.Get(&newFile, `update public.files 
 set title = $1,
     file = $2,
-    notes = $3,
+    file_name = $3,
+    notes = $4,
     changed = now()
 where 1=1
-and user_id = $4
-and id = $5
-returning id, title, file, notes, created, changed;`,
-		file.Title, file.File, file.Notes, file.UserID, file.ID)
+and user_id = $5
+and id = $6
+returning id, title, file_name, file, notes, created, changed;`,
+		file.Title, file.File, file.FileName, file.Notes, file.UserID, file.ID)
 	if resErr != nil {
 		return models.File{}, resErr
 	}

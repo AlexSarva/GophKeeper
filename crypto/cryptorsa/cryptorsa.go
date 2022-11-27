@@ -23,6 +23,9 @@ type RSAConf struct {
 }
 
 func InitRSAConf(path string, size int) *RSAConf {
+	if size < 1024 {
+		log.Fatalln("key size must by more or equal 1024")
+	}
 	return &RSAConf{
 		keysPath: path,
 		idRsa:    filepath.Join(path, "id_rsa"),
@@ -33,7 +36,7 @@ func InitRSAConf(path string, size int) *RSAConf {
 
 func (r *RSAConf) InitCrypto() error {
 	if _, err := os.Stat(r.keysPath); err != nil {
-		// create it
+		log.Printf("keys will be add in this path: %s", r.keysPath)
 		err = os.Mkdir(r.keysPath, 0700)
 		if err != nil {
 			return err
@@ -238,7 +241,6 @@ func (r *RSAConf) Decrypt(payload string) (string, error) {
 	label := []byte("OAEP Encrypted")
 	msg, err := base64.StdEncoding.DecodeString(payload)
 	if err != nil {
-		log.Println("тут")
 		return "", err
 	}
 
@@ -259,30 +261,3 @@ func (r *RSAConf) Decrypt(payload string) (string, error) {
 
 	return string(plainText), nil
 }
-
-//func main() {
-//	message := "Привет, как твои дела?"
-//	bestCrypto := InitRSAConf("keys", 1024)
-//	if initCryptoErr := bestCrypto.InitCrypto(); initCryptoErr != nil {
-//		log.Println(initCryptoErr)
-//	}
-//	enc, encErr := bestCrypto.Encrypt(message)
-//	if encErr != nil {
-//		log.Println("Encrypted: ", encErr)
-//	}
-//
-//	sig, sigErr := bestCrypto.Sign(message)
-//	if sigErr != nil {
-//		log.Println(sigErr)
-//	}
-//	log.Println("SIG: ", sig)
-//	verify := bestCrypto.Verify(message, sig)
-//	log.Println("Verify: ", verify)
-//
-//	log.Println(enc)
-//	decr, decrErr := bestCrypto.Decrypt(enc)
-//	if decrErr != nil {
-//		log.Println(decrErr)
-//	}
-//	log.Println(decr)
-//}

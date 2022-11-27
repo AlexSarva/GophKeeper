@@ -1,6 +1,7 @@
 package models
 
 import (
+	"AlexSarva/GophKeeper/crypto"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,4 +24,32 @@ type NewCred struct {
 	Login  string    `json:"login" db:"login"`
 	Passwd string    `json:"passwd" db:"passwd"`
 	Notes  string    `json:"notes,omitempty" db:"notes"`
+}
+
+func (nc *NewCred) Encrypt(cryptorizer *crypto.Cryptorizer) error {
+	cryptLogin, cryptLoginErr := cryptorizer.Cryptorizer.Encrypt(nc.Login)
+	if cryptLoginErr != nil {
+		return cryptLoginErr
+	}
+	cryptPasswd, cryptPasswdErr := cryptorizer.Cryptorizer.Encrypt(nc.Passwd)
+	if cryptPasswdErr != nil {
+		return cryptPasswdErr
+	}
+	nc.Login = cryptLogin
+	nc.Passwd = cryptPasswd
+	return nil
+}
+
+func (c *Cred) Decrypt(cryptorizer *crypto.Cryptorizer) error {
+	decryptLogin, decryptLoginErr := cryptorizer.Cryptorizer.Decrypt(c.Login)
+	if decryptLoginErr != nil {
+		return decryptLoginErr
+	}
+	decryptPasswd, decryptPasswdErr := cryptorizer.Cryptorizer.Decrypt(c.Passwd)
+	if decryptPasswdErr != nil {
+		return decryptPasswdErr
+	}
+	c.Login = decryptLogin
+	c.Passwd = decryptPasswd
+	return nil
 }

@@ -16,9 +16,14 @@ import (
 
 func PostFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		filename := r.URL.Query().Get("title")
-		if filename == "" {
+		title := r.URL.Query().Get("title")
+		if title == "" {
 			errorMessageResponse(w, "dont have parameter 'title' in request", "application/json", http.StatusBadRequest)
+			return
+		}
+		filename := r.URL.Query().Get("filename")
+		if filename == "" {
+			errorMessageResponse(w, "dont have parameter 'filename' in request", "application/json", http.StatusBadRequest)
 			return
 		}
 		notes := r.URL.Query().Get("notes")
@@ -41,7 +46,8 @@ func PostFile(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		file.File = buf
-		file.Title = filename
+		file.Title = title
+		file.FileName = filename
 		if notes != "" {
 			file.Notes = notes
 		}
@@ -112,9 +118,14 @@ func GetFile(database *app.Storage) http.HandlerFunc {
 
 func EditFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		filename := r.URL.Query().Get("title")
-		if filename == "" {
+		title := r.URL.Query().Get("title")
+		if title == "" {
 			errorMessageResponse(w, "dont have parameter 'title' in request", "application/json", http.StatusBadRequest)
+			return
+		}
+		filename := r.URL.Query().Get("filename")
+		if filename == "" {
+			errorMessageResponse(w, "dont have parameter 'filename' in request", "application/json", http.StatusBadRequest)
 			return
 		}
 		notes := r.URL.Query().Get("notes")
@@ -131,7 +142,8 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 			log.Fatal("request", err)
 		}
 		editFile.File = buf
-		editFile.Title = filename
+		editFile.Title = title
+		editFile.FileName = filename
 		if notes != "" {
 			editFile.Notes = notes
 		}

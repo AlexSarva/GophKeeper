@@ -1,12 +1,14 @@
 package workclient
 
 import (
+	"AlexSarva/GophKeeper/crypto"
+	"AlexSarva/GophKeeper/crypto/cryptorsa"
+	"AlexSarva/GophKeeper/crypto/symmetric"
 	"AlexSarva/GophKeeper/models"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"time"
 
@@ -27,9 +29,17 @@ var (
 	ErrInternalServer = errors.New("an internal server error")
 	ErrReqFormat      = errors.New("invalid request format")
 	ErrNoData         = errors.New("no info in DB")
+	ErrTokenExpired   = errors.New("unauthorized: token is expired")
 )
 
-func switchTypesList(infoType string, r *gentleman.Response) (interface{}, error) {
+func InitCryptorizer(ketsPath string, size int) *crypto.Cryptorizer {
+	cryptorizer := cryptorsa.InitRSAConf(ketsPath, size)
+	return &crypto.Cryptorizer{
+		Cryptorizer: cryptorizer,
+	}
+}
+
+func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interface{}, error) {
 	var res interface{}
 	switch infoType {
 	case "cards":
@@ -37,25 +47,57 @@ func switchTypesList(infoType string, r *gentleman.Response) (interface{}, error
 		if respErr := r.JSON(&cards); respErr != nil {
 			return nil, respErr
 		}
-		res = cards
+		var decrCards []models.Card
+		for _, card := range cards {
+			if decryptErr := card.Decrypt(c.cryptorizer); decryptErr != nil {
+				return nil, decryptErr
+			}
+			decrCards = append(decrCards, card)
+		}
+		res = decrCards
+		break
 	case "notes":
 		var notes []models.Note
 		if respErr := r.JSON(&notes); respErr != nil {
 			return nil, respErr
 		}
-		res = notes
+		var descrNotes []models.Note
+		for _, note := range notes {
+			if decryptErr := note.Decrypt(c.cryptorizer); decryptErr != nil {
+				return nil, decryptErr
+			}
+			descrNotes = append(descrNotes, note)
+		}
+		res = descrNotes
+		break
 	case "files":
 		var files []models.File
 		if respErr := r.JSON(&files); respErr != nil {
 			return nil, respErr
 		}
-		res = files
+		var descrFiles []models.File
+		for _, file := range files {
+			if symDecrErr := file.SymDecrypt(c.symmCrypto); symDecrErr != nil {
+				return nil, symDecrErr
+			}
+			descrFiles = append(descrFiles, file)
+		}
+		res = descrFiles
+		break
 	case "creds":
 		var creds []models.Cred
 		if respErr := r.JSON(&creds); respErr != nil {
 			return nil, respErr
 		}
-		res = creds
+		var descrCreds []models.Cred
+		for _, cred := range creds {
+			if decryptErr := cred.Decrypt(c.cryptorizer); decryptErr != nil {
+				return nil, decryptErr
+			}
+			descrCreds = append(descrCreds, cred)
+		}
+		res = descrCreds
+		break
 	}
 	return res, nil
 }
@@ -93,25 +135,30 @@ func switchType(infoType string, r *gentleman.Response) (interface{}, error) {
 
 // Client custom type of work client
 type Client struct {
-	client  *gentleman.Client
-	baseUrl string
+	client      *gentleman.Client
+	baseUrl     string
+	cryptorizer *crypto.Cryptorizer
+	symmCrypto  *symmetric.SymmetricCrypto
 }
 
-// WorkClient initialize new client for work with service
-func WorkClient(baseUrl string) (*Client, error) {
+// InitClient initialize new client for work with service
+func InitClient(cfg *models.GUIConfig) (*Client, error) {
 	cli := gentleman.New()
 	cli.Use(timeout.Request(5 * time.Second))
 	cli.Use(retry.New(retrier.New(retrier.ExponentialBackoff(5, 100*time.Millisecond), nil)))
+	cryptorizer := InitCryptorizer(cfg.KeysPath, cfg.KeysSize)
+	symmCrypto := symmetric.SymmCrypto(cfg.Secret)
 	return &Client{
-		client:  cli,
-		baseUrl: baseUrl,
+		client:      cli,
+		baseUrl:     cfg.ServerAddress,
+		cryptorizer: cryptorizer,
+		symmCrypto:  symmCrypto,
 	}, nil
 }
 
 // UseToken method uses to add bearer token to client
 func (c *Client) UseToken(bearer string) *Client {
 	token := strings.Split(bearer, " ")
-	log.Println(token[len(token)-1])
 	c.client.Use(auth.Bearer(token[len(token)-1]))
 	return c
 }
@@ -163,6 +210,9 @@ func (c *Client) Login(userInfo *models.UserLogin) (*models.User, error) {
 	if !res.Ok {
 		if res.StatusCode == 401 {
 			return nil, ErrCreds
+		}
+		if res.StatusCode == 403 {
+			return nil, ErrTokenExpired
 		}
 		if res.StatusCode == 500 {
 			return nil, ErrInternalServer
@@ -225,7 +275,7 @@ func (c *Client) ElementList(infoType string) (interface{}, error) {
 		return nil, ErrReqFormat
 	}
 
-	result, resultErr := switchTypesList(infoType, res)
+	result, resultErr := c.switchTypesList(infoType, res)
 	if resultErr != nil {
 		return nil, resultErr
 	}
@@ -268,16 +318,45 @@ func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, err
 	req := c.client.Request()
 	req.URL(fmt.Sprintf("%s/info/%s", c.baseUrl, infoType))
 	req.Method("POST")
-	if infoType != "files" {
-		req.Use(body.JSON(elem))
-	}
-	if infoType == "files" {
-		file := elem.(models.NewFile)
+
+	switch infoType {
+	case "cards":
+		card := elem.(*models.NewCard)
+		if checkErr := card.CheckValid(); checkErr != nil {
+			return nil, checkErr
+		}
+		if cryptoErr := card.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(card))
+		break
+	case "creds":
+		cred := elem.(*models.NewCred)
+		if cryptoErr := cred.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(cred))
+		break
+	case "notes":
+		note := elem.(*models.NewNote)
+		if cryptoErr := note.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(note))
+		break
+	case "files":
+		file := elem.(*models.NewFile)
+		file.SymEncrypt(c.symmCrypto)
 		req.Use(query.Set("title", file.Title))
-		req.Use(query.Set("note", file.Notes))
+		req.Use(query.Set("notes", file.Notes))
+		req.Use(query.Set("filename", file.FileName))
 		f := io.NopCloser(bytes.NewBuffer(file.File))
 		req.Use(body.Reader(f))
+		break
+	default:
+		return nil, errors.New("wrong info type parameter")
 	}
+
 	res, err := req.Send()
 	if err != nil {
 		return nil, err
@@ -308,16 +387,44 @@ func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (i
 	req := c.client.Request()
 	req.URL(fmt.Sprintf("%s/info/%s/%s", c.baseUrl, infoType, id))
 	req.Method("PATCH")
-	if infoType != "files" {
-		req.Use(body.JSON(elem))
-	}
-	if infoType == "files" {
-		file := elem.(models.NewFile)
+	switch infoType {
+	case "cards":
+		card := elem.(*models.NewCard)
+		if checkErr := card.CheckValid(); checkErr != nil {
+			return nil, checkErr
+		}
+		if cryptoErr := card.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(card))
+		break
+	case "creds":
+		cred := elem.(*models.NewCred)
+		if cryptoErr := cred.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(cred))
+		break
+	case "notes":
+		note := elem.(*models.NewNote)
+		if cryptoErr := note.Encrypt(c.cryptorizer); cryptoErr != nil {
+			return nil, cryptoErr
+		}
+		req.Use(body.JSON(note))
+		break
+	case "files":
+		file := elem.(*models.NewFile)
+		file.SymEncrypt(c.symmCrypto)
 		req.Use(query.Set("title", file.Title))
-		req.Use(query.Set("note", file.Notes))
+		req.Use(query.Set("filename", file.FileName))
+		req.Use(query.Set("notes", file.Notes))
 		f := io.NopCloser(bytes.NewBuffer(file.File))
 		req.Use(body.Reader(f))
+		break
+	default:
+		return nil, errors.New("wrong info type parameter")
 	}
+
 	res, err := req.Send()
 	if err != nil {
 		return nil, err

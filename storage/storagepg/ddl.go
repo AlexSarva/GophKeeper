@@ -25,6 +25,7 @@ create table if not exists public.files (
   id uuid primary key default gen_random_uuid(),
   user_id uuid  not null,
   title text  not null,
+    file_name text not null,
   file bytea  not null,
   notes text,
   created timestamp default now(),

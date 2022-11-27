@@ -50,8 +50,28 @@ func (a *Admin) CheckUser(userID uuid.UUID) bool {
 // Register insert new User in Databse
 func (a *Admin) Register(user models.User) error {
 	tx := a.database.MustBegin()
-	log.Printf("%+v\n", user)
 	resInsert, resErr := tx.NamedExec("INSERT INTO public.users (id, username, email, passwd, token, token_expires) VALUES (:id, :username, :email, :passwd, :token, :token_expires) on conflict (email) do nothing ", &user)
+	if resErr != nil {
+		return resErr
+	}
+	affectedRows, affectedRowsErr := resInsert.RowsAffected()
+	if affectedRowsErr != nil {
+		return affectedRowsErr
+	}
+	if affectedRows == 0 {
+		return storage.ErrDuplicatePK
+	}
+	return tx.Commit()
+}
+
+// RenewToken refresh token for User in Databse
+func (a *Admin) RenewToken(user models.User) error {
+	tx := a.database.MustBegin()
+	resInsert, resErr := tx.Exec(`
+update public.users set token = $1,
+                      token_expires = $2
+                      where id = $3
+`, user.Token, user.TokenExp, user.ID)
 	if resErr != nil {
 		return resErr
 	}

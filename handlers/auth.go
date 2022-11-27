@@ -7,7 +7,10 @@ import (
 	"AlexSarva/GophKeeper/storage"
 	"AlexSarva/GophKeeper/utils"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -103,8 +106,27 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 			errorMessageResponse(w, userInfoErr.Error(), "application/json", http.StatusInternalServerError)
 			return
 		}
-
 		userInfo.Password = ""
+
+		log.Println(userInfo.Token)
+
+		jwt := strings.Split(userInfo.Token, " ")[1]
+
+		_, userIDErr := database.Authorizer.ParseToken(jwt)
+		if userIDErr != nil {
+			if strings.Contains(userIDErr.Error(), "token is expired") {
+				userNewInfo, userInfErr := database.Authorizer.RenewToken(*userInfo)
+				if userInfErr != nil {
+					errorMessageResponse(w, userInfErr.Error(), "application/json", http.StatusInternalServerError)
+					return
+				}
+				userNewInfo.Password = ""
+				resultResponse(w, userNewInfo, "application/json", http.StatusOK)
+			}
+
+			errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", userIDErr), "application/json", http.StatusForbidden)
+			return
+		}
 
 		resultResponse(w, userInfo, "application/json", http.StatusOK)
 	}

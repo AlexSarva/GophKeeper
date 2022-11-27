@@ -21,7 +21,7 @@ type Storage struct {
 // NewStorage generate new instance of database
 func NewStorage() *Storage {
 
-	cfg := constant.GlobalContainer.Get("server-config").(models.Config)
+	cfg := constant.GlobalContainer.Get("server-config").(models.ServerConfig)
 
 	mainStorage := storagepg.PostgresDBConn(cfg.Database)
 	adminStorage := admin.NewAdminDBConnection(cfg.AdminDatabase)
