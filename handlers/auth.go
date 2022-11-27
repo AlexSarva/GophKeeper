@@ -17,7 +17,7 @@ import (
 
 // UserRegistration - user registration method
 //
-// Handler POST /api/v1/admin/register
+// Handler POST /api/v1/register
 //
 // Registration is performed by a pair of login/password.
 // Each login must be set.
@@ -32,6 +32,7 @@ import (
 // 201 - user successfully registered and authenticated;
 // 400 - invalid request format;
 // 409 - login is already taken;
+// 417 - if login or password not valid;
 // 500 - an internal server error.
 func UserRegistration(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,7 @@ func UserRegistration(database *app.Storage) http.HandlerFunc {
 
 // UserAuthentication - user authentication method
 //
-// Handler POST /api/v1/admin/login
+// Handler POST /api/v1/login
 //
 // Authentication is performed by a login/password pair.
 // Request format:
@@ -146,7 +147,7 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 
 // GetUserInfo - user info method
 //
-// Handler GET /api/v1/admin/users/me
+// Handler GET /api/v1/users/me
 //
 // Authorization: "Bearer T"
 //
@@ -158,7 +159,7 @@ func UserAuthentication(database *app.Storage) http.HandlerFunc {
 func GetUserInfo(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return

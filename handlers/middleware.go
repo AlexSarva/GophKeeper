@@ -16,6 +16,7 @@ import (
 
 var ErrGetUserID = errors.New("cant get userID from ctx")
 
+// JWTUserID type uses to pass user ID throw context
 type JWTUserID string
 
 const (
@@ -60,7 +61,7 @@ func checkContent(next http.Handler) http.Handler {
 func userIdentification(database *app.Storage) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			jwt, jwtErr := GetToken(r)
+			jwt, jwtErr := getToken(r)
 			if jwtErr != nil {
 				errorMessageResponse(w, fmt.Sprint(ErrUnauthorized, ": ", jwtErr), "application/json", http.StatusUnauthorized)
 				return
@@ -80,7 +81,8 @@ func userIdentification(database *app.Storage) func(next http.Handler) http.Hand
 	}
 }
 
-func GetUserID(ctx context.Context) (uuid.UUID, error) {
+// getUserID returns user ID from context
+func getUserID(ctx context.Context) (uuid.UUID, error) {
 	userID, ok := ctx.Value(keyPrincipalID).(uuid.UUID)
 	if !ok {
 		return uuid.UUID{}, ErrGetUserID

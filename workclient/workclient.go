@@ -2,8 +2,7 @@ package workclient
 
 import (
 	"AlexSarva/GophKeeper/crypto"
-	"AlexSarva/GophKeeper/crypto/cryptorsa"
-	"AlexSarva/GophKeeper/crypto/symmetric"
+	"AlexSarva/GophKeeper/crypto/cryptoblock"
 	"AlexSarva/GophKeeper/models"
 	"bytes"
 	"errors"
@@ -31,13 +30,6 @@ var (
 	ErrNoData         = errors.New("no info in DB")
 	ErrTokenExpired   = errors.New("unauthorized: token is expired")
 )
-
-func InitCryptorizer(ketsPath string, size int) *crypto.Cryptorizer {
-	cryptorizer := cryptorsa.InitRSAConf(ketsPath, size)
-	return &crypto.Cryptorizer{
-		Cryptorizer: cryptorizer,
-	}
-}
 
 func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interface{}, error) {
 	var res interface{}
@@ -75,7 +67,7 @@ func (c *Client) switchTypesList(infoType string, r *gentleman.Response) (interf
 		}
 		var descrFiles []models.File
 		for _, file := range files {
-			if symDecrErr := file.SymDecrypt(c.symmCrypto); symDecrErr != nil {
+			if symDecrErr := file.Decrypt(c.symCrypto); symDecrErr != nil {
 				return nil, symDecrErr
 			}
 			descrFiles = append(descrFiles, file)
@@ -134,7 +126,7 @@ type Client struct {
 	client      *gentleman.Client
 	baseURL     string
 	cryptorizer *crypto.Cryptorizer
-	symmCrypto  *symmetric.SymmetricCrypto
+	symCrypto   *cryptoblock.AEADCrypto
 }
 
 // InitClient initialize new client for work with service
@@ -142,13 +134,16 @@ func InitClient(cfg *models.GUIConfig) (*Client, error) {
 	cli := gentleman.New()
 	cli.Use(timeout.Request(5 * time.Second))
 	cli.Use(retry.New(retrier.New(retrier.ExponentialBackoff(5, 100*time.Millisecond), nil)))
-	cryptorizer := InitCryptorizer(cfg.KeysPath, cfg.KeysSize)
-	symmCrypto := symmetric.SymmCrypto(cfg.Secret)
+	cryptorizer, cryptorizerErr := crypto.InitCryptorizer(cfg.KeysPath, cfg.KeysSize)
+	if cryptorizerErr != nil {
+		return nil, cryptorizerErr
+	}
+	symCrypto := cryptoblock.InitAEADCrypto(cfg.Secret)
 	return &Client{
 		client:      cli,
 		baseURL:     cfg.ServerAddress,
 		cryptorizer: cryptorizer,
-		symmCrypto:  symmCrypto,
+		symCrypto:   symCrypto,
 	}, nil
 }
 
@@ -342,7 +337,7 @@ func (c *Client) AddElement(infoType string, elem interface{}) (interface{}, err
 		req.Use(body.JSON(note))
 	case "files":
 		file := elem.(*models.NewFile)
-		file.SymEncrypt(c.symmCrypto)
+		file.Encrypt(c.symCrypto)
 		req.Use(query.Set("title", file.Title))
 		req.Use(query.Set("notes", file.Notes))
 		req.Use(query.Set("filename", file.FileName))
@@ -406,7 +401,7 @@ func (c *Client) EditElement(infoType string, elem interface{}, id uuid.UUID) (i
 		req.Use(body.JSON(note))
 	case "files":
 		file := elem.(*models.NewFile)
-		file.SymEncrypt(c.symmCrypto)
+		file.Encrypt(c.symCrypto)
 		req.Use(query.Set("title", file.Title))
 		req.Use(query.Set("filename", file.FileName))
 		req.Use(query.Set("notes", file.Notes))

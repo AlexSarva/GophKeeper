@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// PostCard - add credit card method
+//
+// Handler POST /api/v1/info/cards
+//
+//	"title": "<title>",
+//	"card_number": "<card_number>",
+//	"card_owner": "<card_owner>",
+//	"card_exp": "<card_exp>",
+//	"notes": "<notes>"
+//
+// Possible response codes:
+// 201 - credit card successfully added;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func PostCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var card models.NewCard
@@ -20,27 +35,41 @@ func PostCard(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
 		card.UserID = userID
-
-		newNote, newNoteErr := database.Database.NewCard(&card)
-		if newNoteErr != nil {
-			errorMessageResponse(w, newNoteErr.Error(), "application/json", http.StatusInternalServerError)
+		if card.CardNumber == "" || card.CardOwner == "" || card.CardExp == "" {
+			errorMessageResponse(w, "empty fields error", "application/json", http.StatusBadRequest)
 			return
 		}
 
-		resultResponse(w, newNote, "application/json", http.StatusCreated)
+		newCard, newCardErr := database.Database.NewCard(&card)
+		if newCardErr != nil {
+			errorMessageResponse(w, newCardErr.Error(), "application/json", http.StatusInternalServerError)
+			return
+		}
+
+		resultResponse(w, newCard, "application/json", http.StatusCreated)
 	}
 }
 
+// GetCardList - get all credit cards method
+//
+// Handler GET /api/v1/info/cards
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func GetCardList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -60,10 +89,21 @@ func GetCardList(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetCard - get credit card method (by uuid)
+//
+// Handler GET /api/v1/info/cards/{id}
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credit card in database;
+// 500 - an internal server error.
 func GetCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -90,6 +130,22 @@ func GetCard(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// EditCard - edit credit card information method
+//
+// Handler PATCH /api/v1/info/cards/{id}
+//
+//	"title": "<title>",
+//	"card_number": "<card_number>",
+//	"card_owner": "<card_owner>",
+//	"card_exp": "<card_exp>",
+//	"notes": "<notes>"
+//
+// Possible response codes:
+// 201 - credit card information successfully changed;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credit card in database;
+// 500 - an internal server error.
 func EditCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var editCard models.NewCard
@@ -99,7 +155,7 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -161,10 +217,20 @@ func EditCard(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// DeleteCard - delete credit card method
+//
+// Handler DELETE /api/v1/info/cards/{id}
+//
+// Possible response codes:
+// 200 - successful deleted;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credit card in database;
+// 500 - an internal server error.
 func DeleteCard(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return

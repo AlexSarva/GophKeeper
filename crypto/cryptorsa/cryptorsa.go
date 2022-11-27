@@ -15,18 +15,22 @@ import (
 	"strings"
 )
 
-type RSAConf struct {
+// RSACrypt implements ID_RSA crypto methods
+type RSACrypt struct {
 	keysPath string
 	idRsa    string
 	idRsaPub string
 	keySize  int
 }
 
-func InitRSAConf(path string, size int) *RSAConf {
+// InitRSACrypt initializer of RSACrypt struct
+// path - folder path for store keys (id_rsa / id_rsa.pub)
+// size - refer to the number of bits in a key used by a cryptographic algorithm
+func InitRSACrypt(path string, size int) *RSACrypt {
 	if size < 1024 {
 		log.Fatalln("key size must by more or equal 1024")
 	}
-	return &RSAConf{
+	return &RSACrypt{
 		keysPath: path,
 		idRsa:    filepath.Join(path, "id_rsa"),
 		idRsaPub: filepath.Join(path, "id_rsa.pub"),
@@ -34,7 +38,9 @@ func InitRSAConf(path string, size int) *RSAConf {
 	}
 }
 
-func (r *RSAConf) InitCrypto() error {
+// InitCrypto checks for the presence of keys in the directory,
+// if no keys are found - creates a pair personal and public keys
+func (r *RSACrypt) InitCrypto() error {
 	if _, err := os.Stat(r.keysPath); err != nil {
 		log.Printf("keys will be add in this path: %s", r.keysPath)
 		err = os.Mkdir(r.keysPath, 0700)
@@ -64,7 +70,7 @@ func (r *RSAConf) InitCrypto() error {
 	return nil
 }
 
-func (r *RSAConf) generateKeyPair() (*rsa.PrivateKey, error) {
+func (r *RSACrypt) generateKeyPair() (*rsa.PrivateKey, error) {
 	// generate key pair
 	keyPair, err := rsa.GenerateKey(rand.Reader, r.keySize)
 	if err != nil {
@@ -80,7 +86,7 @@ func (r *RSAConf) generateKeyPair() (*rsa.PrivateKey, error) {
 	return keyPair, nil
 }
 
-func (r *RSAConf) saveIDRsa(keyPair *rsa.PrivateKey) error {
+func (r *RSACrypt) saveIDRsa(keyPair *rsa.PrivateKey) error {
 	// private key stream
 	privateKeyBlock := &pem.Block{
 		Type:  "PRIVATE KEY",
@@ -101,7 +107,7 @@ func (r *RSAConf) saveIDRsa(keyPair *rsa.PrivateKey) error {
 	return nil
 }
 
-func (r *RSAConf) saveIDRsaPub(keyPair *rsa.PrivateKey) error {
+func (r *RSACrypt) saveIDRsaPub(keyPair *rsa.PrivateKey) error {
 	// public key stream
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&keyPair.PublicKey)
 	if err != nil {
@@ -126,7 +132,7 @@ func (r *RSAConf) saveIDRsaPub(keyPair *rsa.PrivateKey) error {
 	return nil
 }
 
-func (r *RSAConf) getIDRsa() (*rsa.PrivateKey, error) {
+func (r *RSACrypt) getIDRsa() (*rsa.PrivateKey, error) {
 	keyData, err := os.ReadFile(r.idRsa)
 	if err != nil {
 		return nil, err
@@ -145,7 +151,7 @@ func (r *RSAConf) getIDRsa() (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func (r *RSAConf) getIDRsaPub() (*rsa.PublicKey, error) {
+func (r *RSACrypt) getIDRsaPub() (*rsa.PublicKey, error) {
 	keyData, err := os.ReadFile(r.idRsaPub)
 	if err != nil {
 		return nil, err
@@ -168,7 +174,8 @@ func (r *RSAConf) getIDRsaPub() (*rsa.PublicKey, error) {
 	}
 }
 
-func (r *RSAConf) Sign(payload string) (string, error) {
+// Sign signs the file and returns the signature in base64
+func (r *RSACrypt) Sign(payload string) (string, error) {
 	// remove unwated characters and get sha256 hash of the payload
 	replacer := strings.NewReplacer("\n", "", "\r", "", " ", "")
 	msg := strings.TrimSpace(strings.ToLower(replacer.Replace(payload)))
@@ -189,7 +196,8 @@ func (r *RSAConf) Sign(payload string) (string, error) {
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-func (r *RSAConf) Verify(payload string, signature64 string) bool {
+// Verify check sign on payload
+func (r *RSACrypt) Verify(payload string, signature64 string) bool {
 	// decode base64 encoded signature
 	signature, err := base64.StdEncoding.DecodeString(signature64)
 	if err != nil {
@@ -216,7 +224,8 @@ func (r *RSAConf) Verify(payload string, signature64 string) bool {
 	return true
 }
 
-func (r *RSAConf) Encrypt(payload string) (string, error) {
+// Encrypt cipher payload via personal private key
+func (r *RSACrypt) Encrypt(payload string) (string, error) {
 	// params
 	label := []byte("OAEP Encrypted")
 	rnd := rand.Reader
@@ -236,7 +245,8 @@ func (r *RSAConf) Encrypt(payload string) (string, error) {
 	return base64.StdEncoding.EncodeToString(cipherText), nil
 }
 
-func (r *RSAConf) Decrypt(payload string) (string, error) {
+// Decrypt deciphers payload via personal public key
+func (r *RSACrypt) Decrypt(payload string) (string, error) {
 	// decode base64 encoded signature
 	label := []byte("OAEP Encrypted")
 	msg, err := base64.StdEncoding.DecodeString(payload)

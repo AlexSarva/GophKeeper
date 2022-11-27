@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// NewCard adds new credit card to database
 func (d *PostgresDB) NewCard(card *models.NewCard) (models.Card, error) {
 	var newCard models.Card
 	resErr := d.database.Get(&newCard, `insert into public.cards (user_id, title, card_number,
@@ -21,6 +22,7 @@ card_owner, card_exp, notes, created, changed;`,
 	return newCard, nil
 }
 
+// AllCards returns all credit cards from database by current user
 func (d *PostgresDB) AllCards(userID uuid.UUID) ([]models.Card, error) {
 	var cards []models.Card
 	resErr := d.database.Select(&cards, `select id, title, card_number,
@@ -33,6 +35,7 @@ from public.cards where user_id = $1 order by changed desc nulls last, created d
 	return cards, nil
 }
 
+// GetCard returns credit card from database by current user and credit card ID
 func (d *PostgresDB) GetCard(cardID uuid.UUID, userID uuid.UUID) (models.Card, error) {
 	var card models.Card
 	resErr := d.database.Get(&card, `select id, title, card_number,
@@ -45,6 +48,7 @@ from public.cards where user_id = $1 and id = $2`,
 	return card, nil
 }
 
+// EditCard changes information in database about credit card by current user and credit card ID
 func (d *PostgresDB) EditCard(card models.NewCard) (models.Card, error) {
 	var newCard models.Card
 	resErr := d.database.Get(&newCard, `update public.cards 
@@ -66,6 +70,7 @@ card_owner, card_exp, notes, created, changed;`,
 	return newCard, nil
 }
 
+// DeleteCard deletes credit card from database by current user and credit card ID
 func (d *PostgresDB) DeleteCard(cardID uuid.UUID, userID uuid.UUID) error {
 	res, resErr := d.database.Exec(`delete
 from public.cards where user_id = $1 and id = $2`,

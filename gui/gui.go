@@ -9,18 +9,21 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// GUI graphical user interface, it allows users to interact with
+// GophKeeper service through graphical icons
 type GUI struct {
 	app        *cview.Application
 	client     *workclient.Client
 	panels     *cview.Panels
-	layouts    *Layouts
-	content    *Content
-	forms      *Forms
-	texts      *Texts
-	constrains *Constrains
-	pagesCnt   int
+	layouts    *layouts
+	content    *content
+	forms      *forms
+	texts      *texts
+	constrains *constrains
 }
 
+// InitGUI initialize GUI, cfg should provide information about service address,
+// crypto keys location, size, and secret for ecnrypt files
 func InitGUI(cfg *models.GUIConfig) *GUI {
 	app := cview.NewApplication()
 	defer app.HandlePanic()
@@ -29,25 +32,25 @@ func InitGUI(cfg *models.GUIConfig) *GUI {
 	if cliErr != nil {
 		log.Fatalln(cliErr)
 	}
-	layouts := InitLayouts()
-	panels := cview.NewPanels()
-	content := InitContent()
-	forms := InitForms()
-	texts := InitTexts()
-	constrains := InitConstrains()
+	workLayouts := initLayouts()
+	workPanels := cview.NewPanels()
+	workContent := initContent()
+	workForms := initForms()
+	workTexts := initTexts()
+	workConstrains := initConstrains()
 	return &GUI{
 		app:        app,
 		client:     cli,
-		layouts:    layouts,
-		panels:     panels,
-		content:    content,
-		forms:      forms,
-		texts:      texts,
-		constrains: constrains,
-		pagesCnt:   5,
+		layouts:    workLayouts,
+		panels:     workPanels,
+		content:    workContent,
+		forms:      workForms,
+		texts:      workTexts,
+		constrains: workConstrains,
 	}
 }
 
+// Render provides basic pages, layouts, modals, texts and forms
 func (gu *GUI) Render() {
 	gu.welcomeContent()
 	gu.authMessage()
@@ -102,6 +105,7 @@ func (gu *GUI) Render() {
 	gu.panels.AddPanel("GetFile", gu.forms.getFileForm, true, false)
 }
 
+// Run starts the GUI
 func (gu *GUI) Run() error {
 	gu.app.SetRoot(gu.panels, true)
 

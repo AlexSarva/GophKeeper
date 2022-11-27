@@ -13,6 +13,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// PostFile - add file method
+//
+// Handler POST /api/v1/info/files
+//
+//		"title": "<title>",
+//		"file_name": "<file_name>",
+//	 "file": <binary file content>",
+//		"notes": "<note>"
+//
+// Possible response codes:
+// 201 - file successfully added;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func PostFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		title := r.URL.Query().Get("title")
@@ -39,7 +53,7 @@ func PostFile(database *app.Storage) http.HandlerFunc {
 			log.Fatal("request", err)
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -62,10 +76,20 @@ func PostFile(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetFileList - get all files method
+//
+// Handler GET /api/v1/info/files
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func GetFileList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -85,10 +109,21 @@ func GetFileList(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetFile - get file method (by uuid)
+//
+// Handler GET /api/v1/info/files/{id}
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such file in database;
+// 500 - an internal server error.
 func GetFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -115,6 +150,21 @@ func GetFile(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// EditFile - edit file information method
+//
+// Handler PATCH /api/v1/info/files/{id}
+//
+//		"title": "<title>",
+//		"file_name": "<file_name>",
+//	 "file": <binary file content>",
+//		"notes": "<note>"
+//
+// Possible response codes:
+// 201 - note information successfully changed;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such file in database;
+// 500 - an internal server error.
 func EditFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		title := r.URL.Query().Get("title")
@@ -147,7 +197,7 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 			editFile.Notes = notes
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -197,10 +247,20 @@ func EditFile(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// DeleteFile - delete file method
+//
+// Handler DELETE /api/v1/info/files/{id}
+//
+// Possible response codes:
+// 200 - successful deleted;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such file in database;
+// 500 - an internal server error.
 func DeleteFile(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return

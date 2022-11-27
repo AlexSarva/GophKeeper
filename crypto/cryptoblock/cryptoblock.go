@@ -1,19 +1,21 @@
-package symmetric
+package cryptoblock
 
 import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha256"
-	"fmt"
 	"log"
 )
 
-type SymmetricCrypto struct {
+// AEADCrypto implements Authenticated Encryption with Associated Data crypto methods
+type AEADCrypto struct {
 	aesgcm cipher.AEAD
 	nonce  []byte
 }
 
-func SymmCrypto(secret string) *SymmetricCrypto {
+// InitAEADCrypto initializer of AEADCrypto struct
+// secret - personal secret word
+func InitAEADCrypto(secret string) *AEADCrypto {
 	key := sha256.Sum256([]byte(secret))
 	aesblock, err := aes.NewCipher(key[:])
 	if err != nil {
@@ -24,21 +26,22 @@ func SymmCrypto(secret string) *SymmetricCrypto {
 		log.Fatalf("error: %v\n", err)
 	}
 	nonce := key[len(key)-aesgcm.NonceSize():]
-	return &SymmetricCrypto{
+	return &AEADCrypto{
 		aesgcm: aesgcm,
 		nonce:  nonce,
 	}
 }
 
-func (sc *SymmetricCrypto) Encrypt(payload []byte) []byte {
+// Encrypt cipher payload with AEAD and secret key
+func (sc *AEADCrypto) Encrypt(payload []byte) []byte {
 	dst := sc.aesgcm.Seal(nil, sc.nonce, payload, nil)
 	return dst
 }
 
-func (sc *SymmetricCrypto) Decrypt(text []byte) ([]byte, error) {
+// Decrypt deciphers payload with AEAD and secret key
+func (sc *AEADCrypto) Decrypt(text []byte) ([]byte, error) {
 	res, err := sc.aesgcm.Open(nil, sc.nonce, text, nil) // расшифровываем
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
 		return nil, err
 	}
 	return res, nil

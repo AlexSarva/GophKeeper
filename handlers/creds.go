@@ -11,6 +11,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// PostCred - add credential method
+//
+// Handler POST /api/v1/info/creds
+//
+//	"title": "<title>",
+//	"login": "<login>",
+//	"password": "<password>",
+//	"notes": "<notes>"
+//
+// Possible response codes:
+// 201 - credential successfully added;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func PostCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var cred models.NewCred
@@ -20,12 +34,17 @@ func PostCred(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
 		cred.UserID = userID
+
+		if cred.Login == "" || cred.Passwd == "" {
+			errorMessageResponse(w, "empty fields error", "application/json", http.StatusBadRequest)
+			return
+		}
 
 		newCred, newCredErr := database.Database.NewCred(&cred)
 		if newCredErr != nil {
@@ -37,10 +56,20 @@ func PostCred(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetCredList - get all credentials method
+//
+// Handler GET /api/v1/info/creds
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func GetCredList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -60,10 +89,21 @@ func GetCredList(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetCred - get credential method (by uuid)
+//
+// Handler GET /api/v1/info/creds/{id}
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credential in database;
+// 500 - an internal server error.
 func GetCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -90,6 +130,21 @@ func GetCred(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// EditCred - edit credential information method
+//
+// Handler PATCH /api/v1/info/creds/{id}
+//
+//	"title": "<title>",
+//	"login": "<login>",
+//	"password": "<password>",
+//	"notes": "<notes>"
+//
+// Possible response codes:
+// 201 - credential information successfully changed;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credential in database;
+// 500 - an internal server error.
 func EditCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var editCred models.NewCred
@@ -99,7 +154,7 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -157,10 +212,20 @@ func EditCred(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// DeleteCred - delete credential method
+//
+// Handler DELETE /api/v1/info/creds/{id}
+//
+// Possible response codes:
+// 200 - successful deleted;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such credential in database;
+// 500 - an internal server error.
 func DeleteCred(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return

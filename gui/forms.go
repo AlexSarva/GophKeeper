@@ -24,11 +24,11 @@ func (gu *GUI) registerForm() {
 	gu.forms.registerForm.AddButton("Register", func() {
 		user, userErr := gu.client.Register(&register)
 		if userErr != nil {
-			gu.texts.ChangeAuthText(userErr.Error(), false)
+			gu.texts.changeAuthText(userErr.Error(), false)
 			gu.errorModalRender(userErr.Error(), "Register")
 			return
 		}
-		gu.texts.ChangeAuthText("", true)
+		gu.texts.changeAuthText("", true)
 		gu.client.UseToken(user.Token)
 		gu.collectionContent()
 		gu.loggedContent()
@@ -52,12 +52,12 @@ func (gu *GUI) loginForm() {
 	gu.forms.loginForm.AddButton("Login", func() {
 		user, userErr := gu.client.Login(&login)
 		if userErr != nil {
-			gu.texts.ChangeAuthText(userErr.Error(), false)
+			gu.texts.changeAuthText(userErr.Error(), false)
 			gu.errorModalRender(userErr.Error(), "Main")
 			return
 		}
 		gu.client.UseToken(user.Token)
-		gu.texts.ChangeAuthText("", true)
+		gu.texts.changeAuthText("", true)
 		gu.collectionContent()
 		gu.loggedContent()
 		gu.panels.SetCurrentPanel("Collection")

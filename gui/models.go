@@ -5,21 +5,21 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type Constrains struct {
+type constrains struct {
 	constrain   *cview.Modal
 	fileHandler *cview.Modal
 }
 
-func InitConstrains() *Constrains {
+func initConstrains() *constrains {
 	constrain := cview.NewModal()
 	fileHandler := cview.NewModal()
-	return &Constrains{
+	return &constrains{
 		constrain:   constrain,
 		fileHandler: fileHandler,
 	}
 }
 
-type Layouts struct {
+type layouts struct {
 	mainPage       *cview.Grid
 	collectionPage *cview.Grid
 	notesPage      *cview.Grid
@@ -29,7 +29,7 @@ type Layouts struct {
 	credsPage      *cview.Grid
 }
 
-func InitLayouts() *Layouts {
+func initLayouts() *layouts {
 	mainGrid := cview.NewGrid()
 	mainGrid.SetColumns(45, 0)
 	mainGrid.SetRows(1, 1, 0)
@@ -78,7 +78,7 @@ func InitLayouts() *Layouts {
 	filesGrid.SetGap(1, 0)
 	filesGrid.AddItem(textPrimitive("Files: ", tcell.ColorBlue, 1), 0, 0, 1, 1, 0, 0, false)
 
-	return &Layouts{
+	return &layouts{
 		mainPage:       mainGrid,
 		collectionPage: collectionGrid,
 		notesPage:      notesGrid,
@@ -89,7 +89,7 @@ func InitLayouts() *Layouts {
 	}
 }
 
-type Content struct {
+type content struct {
 	welcomeContent     *cview.List
 	collectionContent  *cview.List
 	notesContent       *cview.List
@@ -99,7 +99,7 @@ type Content struct {
 	filesContent       *cview.List
 }
 
-func InitContent() *Content {
+func initContent() *content {
 	welcomeContent := cview.NewList()
 	collectionContent := cview.NewList()
 	notesContent := cview.NewList()
@@ -107,7 +107,7 @@ func InitContent() *Content {
 	cardsContent := cview.NewList()
 	credsContent := cview.NewList()
 	filesContent := cview.NewList()
-	return &Content{
+	return &content{
 		welcomeContent:     welcomeContent,
 		collectionContent:  collectionContent,
 		notesContent:       notesContent,
@@ -118,7 +118,7 @@ func InitContent() *Content {
 	}
 }
 
-type Forms struct {
+type forms struct {
 	registerForm *cview.Form
 	loginForm    *cview.Form
 	newNoteForm  *cview.Form
@@ -132,7 +132,7 @@ type Forms struct {
 	getFileForm  *cview.Form
 }
 
-func InitForms() *Forms {
+func initForms() *forms {
 	registerForm := cview.NewForm()
 	loginForm := cview.NewForm()
 	newNoteForm := cview.NewForm()
@@ -144,7 +144,7 @@ func InitForms() *Forms {
 	newFileForm := cview.NewForm()
 	editFileForm := cview.NewForm()
 	getFileForm := cview.NewForm()
-	return &Forms{
+	return &forms{
 		registerForm: registerForm,
 		loginForm:    loginForm,
 		newNoteForm:  newNoteForm,
@@ -159,18 +159,18 @@ func InitForms() *Forms {
 	}
 }
 
-type Texts struct {
+type texts struct {
 	authText *cview.TextView
 }
 
-func InitTexts() *Texts {
+func initTexts() *texts {
 	authText := cview.NewTextView()
-	return &Texts{
+	return &texts{
 		authText: authText,
 	}
 }
 
-func (t *Texts) ChangeAuthText(text string, auth bool) {
+func (t *texts) changeAuthText(text string, auth bool) {
 	if !auth {
 		t.authText.SetTextColor(tcell.ColorRed)
 		t.authText.SetText(text)

@@ -16,6 +16,7 @@ var ErrNotValidCardNumber = errors.New("not valid card number")
 var ErrNotValidCardOwner = errors.New("wrong value for card owner field")
 var ErrNotValidCardExp = errors.New("wrong value for card expiration date")
 
+// Card represents credit card information that stored in database
 type Card struct {
 	ID         uuid.UUID `json:"id" db:"id"`
 	Title      string    `json:"title" db:"title"`
@@ -27,6 +28,7 @@ type Card struct {
 	Changed    *nullTime `json:"changed,omitempty" db:"changed"`
 }
 
+// NewCard represents credit card information that posted by user in service
 type NewCard struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID `json:"user_id" db:"user_id"`
@@ -37,6 +39,7 @@ type NewCard struct {
 	Notes      string    `json:"notes,omitempty" db:"notes"`
 }
 
+// CheckValid format logic check values of fields
 func (nc *NewCard) CheckValid() error {
 	if !utils.CheckValidCardNumber(nc.CardNumber) {
 		return ErrNotValidCardNumber
@@ -54,6 +57,7 @@ func (nc *NewCard) CheckValid() error {
 	return nil
 }
 
+// Encrypt cipher values (card number, card owner and expiration date)
 func (nc *NewCard) Encrypt(cryptorizer *crypto.Cryptorizer) error {
 	cryptCardNum, cryptCardNumErr := cryptorizer.Cryptorizer.Encrypt(nc.CardNumber)
 	if cryptCardNumErr != nil {
@@ -73,6 +77,7 @@ func (nc *NewCard) Encrypt(cryptorizer *crypto.Cryptorizer) error {
 	return nil
 }
 
+// Decrypt decipher values (card number, card owner and expiration date)
 func (c *Card) Decrypt(cryptorizer *crypto.Cryptorizer) error {
 	decryptCardNum, decryptCardNumErr := cryptorizer.Cryptorizer.Decrypt(c.CardNumber)
 	if decryptCardNumErr != nil {

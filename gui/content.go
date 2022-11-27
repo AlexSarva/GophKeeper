@@ -55,7 +55,7 @@ func (gu *GUI) loggedContent() {
 	logoutItem.SetShortcut('2')
 	logoutItem.SetSelectedFunc(func() {
 		gu.welcomeContent()
-		gu.texts.ChangeAuthText("You are not logged in!", false)
+		gu.texts.changeAuthText("You are not logged in!", false)
 		//gu.client.UseToken("")
 		gu.panels.SetCurrentPanel("Main")
 	})

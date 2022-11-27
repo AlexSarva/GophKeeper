@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Cred represents credentials (login / password) information that stored in database
 type Cred struct {
 	ID      uuid.UUID `json:"id" db:"id"`
 	Title   string    `json:"title" db:"title"`
@@ -17,6 +18,7 @@ type Cred struct {
 	Changed *nullTime `json:"changed,omitempty" db:"changed"`
 }
 
+// NewCred represents credentials (login / password) that posted by user in service
 type NewCred struct {
 	ID     uuid.UUID
 	UserID uuid.UUID `json:"user_id" db:"user_id"`
@@ -26,6 +28,7 @@ type NewCred struct {
 	Notes  string    `json:"notes,omitempty" db:"notes"`
 }
 
+// Encrypt cipher values (login / password)
 func (nc *NewCred) Encrypt(cryptorizer *crypto.Cryptorizer) error {
 	cryptLogin, cryptLoginErr := cryptorizer.Cryptorizer.Encrypt(nc.Login)
 	if cryptLoginErr != nil {
@@ -40,6 +43,7 @@ func (nc *NewCred) Encrypt(cryptorizer *crypto.Cryptorizer) error {
 	return nil
 }
 
+// Decrypt decipher values (login / password)
 func (c *Cred) Decrypt(cryptorizer *crypto.Cryptorizer) error {
 	decryptLogin, decryptLoginErr := cryptorizer.Cryptorizer.Decrypt(c.Login)
 	if decryptLoginErr != nil {

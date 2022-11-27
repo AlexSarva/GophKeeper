@@ -108,7 +108,7 @@ func readBodyInStruct(r *http.Request, data interface{}) error {
 // gzipContentTypes request types that support data compression
 var gzipContentTypes = "application/x-gzip, application/javascript, application/json, text/css, text/html, text/plain, text/xml"
 
-func CustomAllowOriginFunc(_ *http.Request, origin string) bool {
+func customAllowOriginFunc(_ *http.Request, origin string) bool {
 	cfg := constant.GlobalContainer.Get("server-config").(models.ServerConfig)
 	urls := strings.Fields(cfg.CORS)
 	corsMap := make(map[string]bool)
@@ -118,8 +118,9 @@ func CustomAllowOriginFunc(_ *http.Request, origin string) bool {
 	return corsMap[origin]
 }
 
-// Ping returns pong
-func Ping(w http.ResponseWriter, _ *http.Request) {
+// ping returns pong
+func ping(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("pong"))
 	if err != nil {
 		log.Println(err)
@@ -131,7 +132,7 @@ func Ping(w http.ResponseWriter, _ *http.Request) {
 func CustomHandler(database *app.Storage) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
-		AllowOriginFunc: CustomAllowOriginFunc,
+		AllowOriginFunc: customAllowOriginFunc,
 		//AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
@@ -150,7 +151,7 @@ func CustomHandler(database *app.Storage) *chi.Mux {
 	r.Use(checkContent)
 	r.Mount("/debug", middleware.Profiler())
 	//
-	r.Put("/ping", Ping)
+	r.Put("/ping", ping)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", UserRegistration(database))
 		r.Post("/login", UserAuthentication(database))

@@ -11,6 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+// PostNote - add note method
+//
+// Handler POST /api/v1/info/notes
+//
+//	"title": "<title>",
+//	"note": "<note>"
+//
+// Possible response codes:
+// 201 - note successfully added;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func PostNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.NewNote
@@ -20,12 +32,16 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
 		}
 		note.UserID = userID
+		if note.Note == "" {
+			errorMessageResponse(w, "empty fields error", "application/json", http.StatusBadRequest)
+			return
+		}
 
 		newNote, newNoteErr := database.Database.NewNote(&note)
 		if newNoteErr != nil {
@@ -37,10 +53,20 @@ func PostNote(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetNoteList - get all notes method
+//
+// Handler GET /api/v1/info/notes
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 500 - an internal server error.
 func GetNoteList(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -60,10 +86,21 @@ func GetNoteList(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// GetNote - get note method (by uuid)
+//
+// Handler GET /api/v1/info/notes/{id}
+//
+// Possible response codes:
+// 200 - returns information;
+// 204 - no values in database;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such note in database;
+// 500 - an internal server error.
 func GetNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -90,6 +127,19 @@ func GetNote(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// EditNote - edit note information method
+//
+// Handler PATCH /api/v1/info/notes/{id}
+//
+//	"title": "<title>",
+//	"note": "<note>"
+//
+// Possible response codes:
+// 201 - note information successfully changed;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such note in database;
+// 500 - an internal server error.
 func EditNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var editNote models.NewNote
@@ -99,7 +149,7 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 			return
 		}
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
@@ -149,10 +199,20 @@ func EditNote(database *app.Storage) http.HandlerFunc {
 	}
 }
 
+// DeleteNote - delete note method
+//
+// Handler DELETE /api/v1/info/notes/{id}
+//
+// Possible response codes:
+// 200 - successful deleted;
+// 400 - invalid request format;
+// 401 - problem from authentication;
+// 409 - no such note in database;
+// 500 - an internal server error.
 func DeleteNote(database *app.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userID, userIDErr := GetUserID(ctx)
+		userID, userIDErr := getUserID(ctx)
 		if userIDErr != nil {
 			errorMessageResponse(w, ErrUnauthorized.Error()+": "+userIDErr.Error(), "application/json", http.StatusUnauthorized)
 			return
