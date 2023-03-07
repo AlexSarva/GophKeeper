@@ -1,54 +1,27 @@
 package crypto
 
-import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
-	"log"
+import "AlexSarva/GophKeeper/crypto/cryptorsa"
 
-	"github.com/google/uuid"
-)
-
-// ErrNotValidSing - error that occurs when it is impossible to recover UserID
-var ErrNotValidSing = errors.New("sign is not valid")
-
-// Encrypt convert user uuid to hash
-// secret key should be the same for Encrypt and Decrypt
-func Encrypt(uuid uuid.UUID, secret []byte) string {
-	h := hmac.New(sha256.New, secret)
-	h.Write(uuid[:])
-	dst := h.Sum(nil)
-	var fullCookie []byte
-	fullCookie = append(fullCookie, uuid[:]...)
-	fullCookie = append(fullCookie, dst...)
-	return hex.EncodeToString(fullCookie)
+// Crypto interface that used for different types of crypt
+type Crypto interface {
+	Verify(payload string, signature64 string) bool
+	Sign(payload string) (string, error)
+	Encrypt(payload string) (string, error)
+	Decrypt(payload string) (string, error)
 }
 
-// Decrypt convert user hash to uuid
-func Decrypt(hashString string, secret []byte) (uuid.UUID, error) {
-	var (
-		data []byte // декодированное сообщение с подписью
-		err  error
-		sign []byte // HMAC-подпись от идентификатора
-	)
+// Cryptorizer used for implements different types of crypt
+type Cryptorizer struct {
+	Cryptorizer Crypto
+}
 
-	data, err = hex.DecodeString(hashString)
-	if err != nil {
-		log.Println(err)
-		return uuid.UUID{}, ErrNotValidSing
+// InitCryptorizer initializer of Cryptorizer struct
+func InitCryptorizer(ketsPath string, size int) (*Cryptorizer, error) {
+	cryptorizer := cryptorsa.InitRSACrypt(ketsPath, size)
+	if initErr := cryptorizer.InitCrypto(); initErr != nil {
+		return nil, initErr
 	}
-	id, idErr := uuid.FromBytes(data[:16])
-	if idErr != nil {
-		return uuid.UUID{}, idErr
-	}
-	h := hmac.New(sha256.New, secret)
-	h.Write(data[:16])
-	sign = h.Sum(nil)
-
-	if hmac.Equal(sign, data[16:]) {
-		return id, nil
-	} else {
-		return uuid.UUID{}, ErrNotValidSing
-	}
+	return &Cryptorizer{
+		Cryptorizer: cryptorizer,
+	}, nil
 }
